@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Refrigeration Cycle — Real-Time Monitor — {{ unit_tag }}</title>
+<link rel="stylesheet" href="refrigerator/static/refrigerator/css/style.css?v=2.1">
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="hmi-header">
+  <div class="title-block">
+    <div class="system-title">Vapour-Compression Refrigeration Cycle</div>
+    <div class="zone-subtitle">{{ plant_name }} &nbsp;—&nbsp; {{ unit_name }} &nbsp;—&nbsp; {{ unit_tag }}</div>
+  </div>
+  <div class="meta-block">
+    <div class="meta-item">
+      <span class="meta-label">Date</span>
+      <span class="meta-value" id="hdrDate">--</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Time</span>
+      <span class="meta-value" id="hdrTime">--</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Operator</span>
+      <span class="meta-value">MADHUMANOJ</span>
+    </div>
+    <div class="meta-item mode-live" id="hdrModeItem">
+      <span class="meta-label">Simulation Mode</span>
+      <span class="meta-value" id="hdrModeVal">LIVE</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     MAIN LAYOUT
+     ============================================================ -->
+<main class="hmi-main">
+
+  <!-- ---------------- LEFT COLUMN: CYCLE MIMIC + CONTROLS ---------------- -->
+  <div class="mimic-column">
+
+    <section class="panel mimic-panel">
+      <div class="panel-header">
+        <span>Refrigeration Cycle — Compressor / Condenser / Capillary Tube / Evaporator</span>
+        <span id="mimicSystemStatusTag" class="text-gray">STOPPED</span>
+      </div>
+      <div class="panel-body">
+        <div class="mimic-svg-wrap">
+          <!-- ============================================================
+               SVG — 4-COMPONENT REFRIGERATION CYCLE MIMIC
+               Layout: Compressor(left) → Condenser(top) → Capillary(right) → Evaporator(bottom)
+               ============================================================ -->
+          <svg id="machineSvg" viewBox="0 0 1100 660" xmlns="http://www.w3.org/2000/svg">
+
+            <defs>
+              <!-- Arrow markers for flow direction -->
+              <marker id="arrowHot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#c0392b"/>
+              </marker>
+              <marker id="arrowCold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#1a5276"/>
+              </marker>
+              <!-- Compressor body gradient -->
+              <radialGradient id="compBodyGrad" cx="35%" cy="30%" r="65%">
+                <stop offset="0%" stop-color="#575757"/>
+                <stop offset="55%" stop-color="#222"/>
+                <stop offset="100%" stop-color="#0d0d0d"/>
+              </radialGradient>
+              <!-- Copper tube front gradient -->
+              <linearGradient id="copperFrontGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f5b572"/>
+                <stop offset="22%" stop-color="#fff1db"/>
+                <stop offset="48%" stop-color="#c87228"/>
+                <stop offset="78%" stop-color="#843a08"/>
+                <stop offset="100%" stop-color="#522003"/>
+              </linearGradient>
+              <!-- Copper tube back shadow gradient -->
+              <linearGradient id="copperBackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#843a08"/>
+                <stop offset="50%" stop-color="#522003"/>
+                <stop offset="100%" stop-color="#351401"/>
+              </linearGradient>
+
+              <!-- Aesthetic Condenser Fan Blade Gradient (metallic slate / graphite) -->
+              <linearGradient id="condFanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#94a3b8"/>
+                <stop offset="45%" stop-color="#475569"/>
+                <stop offset="100%" stop-color="#1e293b"/>
+              </linearGradient>
+
+              <!-- Aesthetic Evaporator Fan Blade Gradient (aerodynamic cool blue) -->
+              <linearGradient id="evapFanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#90cdf4"/>
+                <stop offset="45%" stop-color="#4299e1"/>
+                <stop offset="100%" stop-color="#2b6cb0"/>
+              </linearGradient>
+
+              <!-- Chrome Spinner Hub Gradient -->
+              <radialGradient id="chromeHubGrad" cx="35%" cy="35%" r="65%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="40%" stop-color="#cbd5e0"/>
+                <stop offset="80%" stop-color="#718096"/>
+                <stop offset="100%" stop-color="#2d3748"/>
+              </radialGradient>
+
+              <!-- ── COMPRESSOR sleek light-grey metallic gradients (No black) ── -->
+              <!-- Main vertical cylinder body: light specular highlight → soft matte silver core → subtle shadow edge -->
+              <linearGradient id="compBodyGradLight" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#9da4ab"/>
+                <stop offset="18%"  stop-color="#e8ecf0"/>
+                <stop offset="38%"  stop-color="#d0d6dc"/>
+                <stop offset="68%"  stop-color="#a8b0b8"/>
+                <stop offset="90%"  stop-color="#8a929a"/>
+                <stop offset="100%" stop-color="#727a82"/>
+              </linearGradient>
+
+              <!-- Domed top cap (rounded dome illumination) -->
+              <radialGradient id="compTopDomeGrad" cx="35%" cy="30%" r="70%">
+                <stop offset="0%"   stop-color="#ffffff"/>
+                <stop offset="45%"  stop-color="#d0d6dc"/>
+                <stop offset="85%"  stop-color="#9aa2aa"/>
+                <stop offset="100%" stop-color="#767e86"/>
+              </radialGradient>
+
+              <!-- Flared skirt & base plate -->
+              <linearGradient id="compBasePlateGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#808890"/>
+                <stop offset="30%"  stop-color="#c6ccd2"/>
+                <stop offset="70%"  stop-color="#9ca4ac"/>
+                <stop offset="100%" stop-color="#646c74"/>
+              </linearGradient>
+
+              <!-- Front rounded terminal / inspection window panel -->
+              <linearGradient id="compFrontPanelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"   stop-color="#c2c8ce"/>
+                <stop offset="40%"  stop-color="#abb2b8"/>
+                <stop offset="100%" stop-color="#8a9198"/>
+              </linearGradient>
+
+              <!-- Inner cavity / motor window -->
+              <radialGradient id="compWindowInnerGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#4a535a"/>
+                <stop offset="70%"  stop-color="#343b42"/>
+                <stop offset="100%" stop-color="#24292e"/>
+              </radialGradient>
+
+              <!-- Motor stator inner glow (green when running) -->
+              <radialGradient id="motorGlowGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%"   stop-color="#48bb78" stop-opacity="0.95"/>
+                <stop offset="60%"  stop-color="#276749" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#1c4532" stop-opacity="0"/>
+              </radialGradient>
+
+              <!-- ── EVAPORATOR realistic gradients ── -->
+              <!-- Aluminium casing face: left bright → right shadow -->
+              <linearGradient id="evapCaseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#8fa8b8"/>
+                <stop offset="12%"  stop-color="#c8dce8"/>
+                <stop offset="50%"  stop-color="#b0c8d8"/>
+                <stop offset="88%"  stop-color="#88a0b0"/>
+                <stop offset="100%" stop-color="#607080"/>
+              </linearGradient>
+              <!-- Aluminium fin panel (top bright → bottom shadow) -->
+              <linearGradient id="evapFinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"   stop-color="#dceef8"/>
+                <stop offset="35%"  stop-color="#b8d4e8"/>
+                <stop offset="65%"  stop-color="#8aafc8"/>
+                <stop offset="100%" stop-color="#6890a8"/>
+              </linearGradient>
+              <!-- Copper refrigerant tube (top specular → bottom dark) -->
+              <linearGradient id="evapTubeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"   stop-color="#f5d08a"/>
+                <stop offset="30%"  stop-color="#e8a832"/>
+                <stop offset="65%"  stop-color="#c07018"/>
+                <stop offset="100%" stop-color="#7a4008"/>
+              </linearGradient>
+              <!-- Frost / condensate glaze overlay on evaporator face -->
+              <linearGradient id="evapFrostGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stop-color="#e8f4ff" stop-opacity="0.55"/>
+                <stop offset="50%"  stop-color="#c8e8ff" stop-opacity="0.30"/>
+                <stop offset="100%" stop-color="#a8d8ff" stop-opacity="0.10"/>
+              </linearGradient>
+              <!-- Evaporator galvanised steel drip tray -->
+              <linearGradient id="evapTrayGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"   stop-color="#3a4a52"/>
+                <stop offset="100%" stop-color="#1e2a30"/>
+              </linearGradient>
+
+              <!-- ── CONDENSER realistic gradients (warm-toned: heat rejection unit) ── -->
+              <!-- Condenser aluminium casing face (warm grey, left bright → right shadow) -->
+              <linearGradient id="condCaseGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%"   stop-color="#8a9aaa"/>
+                <stop offset="10%"  stop-color="#c8cdd2"/>
+                <stop offset="50%"  stop-color="#b5babb"/>
+                <stop offset="90%"  stop-color="#888f93"/>
+                <stop offset="100%" stop-color="#5c6265"/>
+              </linearGradient>
+              <!-- Condenser aluminium fin panel (top highlight → bottom shadow, warm slate) -->
+              <linearGradient id="condFinGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"   stop-color="#dde0e3"/>
+                <stop offset="30%"  stop-color="#c0c4c8"/>
+                <stop offset="70%"  stop-color="#9ea3a8"/>
+                <stop offset="100%" stop-color="#7a8085"/>
+              </linearGradient>
+              <!-- Condenser copper refrigerant tube (warm gold top → dark amber bottom) -->
+              <linearGradient id="condTubeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"   stop-color="#f8d898"/>
+                <stop offset="25%"  stop-color="#e8b040"/>
+                <stop offset="60%"  stop-color="#c87828"/>
+                <stop offset="100%" stop-color="#884010"/>
+              </linearGradient>
+              <!-- Condenser heat shimmer glaze overlay (warm orange tint when hot) -->
+              <linearGradient id="condHeatGlazGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stop-color="#fff4e0" stop-opacity="0.50"/>
+                <stop offset="50%"  stop-color="#ffe0b0" stop-opacity="0.28"/>
+                <stop offset="100%" stop-color="#ffc880" stop-opacity="0.08"/>
+              </linearGradient>
+              <!-- Condenser galvanised steel top/bottom frame -->
+              <linearGradient id="condFrameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%"   stop-color="#48403a"/>
+                <stop offset="100%" stop-color="#28201a"/>
+              </linearGradient>
+            </defs>
+
+            <!-- ============================================================
+                 PIPEWORK — colored by refrigerant state
+                 RED  = high-pressure hot gas (compressor → condenser)
+                 DARK RED = high-pressure liquid (condenser → capillary)
+                 BLUE = low-pressure cold vapour (capillary → evaporator → compressor)
+                 ============================================================ -->
+            <g id="pipework">
+              <!-- 1. HOT GAS: Compressor right port (x=208, y=200) → S-curve up → condenser left inlet (RED) -->
+              <path class="pipe-hot"       d="M 208,200 L 222,200 C 234,200 234,93 244,93"/>
+              <path class="pipe-hot-inner" d="M 208,200 L 222,200 C 234,200 234,93 244,93" marker-end="url(#arrowHot)"/>
+
+              <!-- 2. HIGH-P LIQUID: Condenser fan bottom (x=660, y=276) → down to y=360 → right to x=736 → up to y=290 → capillary inlet (DARK RED) -->
+              <path class="pipe-liquid"       d="M 660,276 L 660,360 L 736,360 L 736,290 L 760,290"/>
+              <path class="pipe-liquid-inner" d="M 660,276 L 660,360 L 736,360 L 736,290 L 760,290" marker-end="url(#arrowHot)"/>
+
+              <!-- 3. LOW-P EXPANDED: Capillary right → right → down → evaporator right (BLUE) -->
+              <path class="pipe-cold"       d="M 974,290 L 1025,290 L 1025,525 L 672,525"/>
+              <path class="pipe-cold-inner" d="M 974,290 L 1025,290 L 1025,525 L 672,525" marker-end="url(#arrowCold)"/>
+
+              <!-- 4. SUCTION: Evaporator left → left → up → compressor left port (BLUE) -->
+              <path class="pipe-cold"       d="M 215,525 L 58,525 L 58,293 L 88,293"/>
+              <path class="pipe-cold-inner" d="M 215,525 L 58,525 L 58,293 L 88,293" marker-end="url(#arrowCold)"/>
+            </g>
+
+            <!-- ============================================================
+                 DIRECTIONAL FLOW ARROWS (indicating refrigerant path)
+                 ============================================================ -->
+            <g id="flowArrows">
+              <!-- 1. Hot gas: Compressor right exit curving up towards Condenser -->
+              <polygon class="flow-arrow flow-arrow-hot" points="230,150 230,134 225,134 233,122 241,134 236,134 236,150"/>
+
+              <!-- 2. High-P liquid: Condenser bottom → down (x=660) -->
+              <polygon class="flow-arrow flow-arrow-hot" points="652,305 652,321 647,321 655,333 663,321 658,321 658,305"/>
+
+              <!-- 3. High-P liquid: Lower run going right (y=360) -->
+              <polygon class="flow-arrow flow-arrow-hot" points="690,354 706,354 706,349 718,357 706,365 706,360 690,360"/>
+
+              <!-- 4. High-P liquid: Rising up into capillary inlet (x=736) -->
+              <polygon class="flow-arrow flow-arrow-hot" points="742,335 742,319 747,319 739,307 731,319 736,319 736,335"/>
+
+              <!-- 5. Low-P expanded: Capillary → Evaporator (Down) -->
+              <polygon class="flow-arrow flow-arrow-cold" points="1048,405 1048,421 1043,421 1051,433 1059,421 1054,421 1054,405"/>
+
+              <!-- 6. Low-P suction: Leaving Evaporator (Left) -->
+              <polygon class="flow-arrow flow-arrow-cold" points="192,547 176,547 176,542 164,550 176,558 176,553 192,553"/>
+
+              <!-- 7. Low-P suction: Going up along left line (Up) -->
+              <polygon class="flow-arrow flow-arrow-cold" points="34,425 34,409 29,409 37,397 45,409 40,409 40,425"/>
+
+              <!-- 8. Low-P suction: Entering Compressor port (Right) -->
+              <polygon class="flow-arrow flow-arrow-cold" points="58,270 74,270 74,265 86,273 74,281 74,276 58,276"/>
+            </g>
+
+            <!-- ============================================================
+                 EVAPORATOR — realistic aluminium plate-fin coil unit
+                 Layout: x=215 to x=670 (coil+fan), y=445 to y=610
+                 ============================================================ -->
+            <g id="evaporator" class="component state-off">
+
+              <!-- ── Outer casing / housing box ── -->
+              <!-- Top cap bar (galv. steel frame) -->
+              <rect x="215" y="445" width="455" height="8" rx="2" fill="url(#evapTrayGrad)" stroke="#1a2830" stroke-width="1.2"/>
+              <!-- Main body face (aluminium) — slight 3-D: brighter on left, darker on right -->
+              <rect x="215" y="453" width="385" height="155" fill="url(#evapCaseGrad)" stroke="#3a5060" stroke-width="1.5"/>
+              <!-- Right-edge shadow strip (depth) -->
+              <rect x="596" y="453" width="6" height="155" fill="#4a6070"/>
+              <!-- Bottom frame bar (drip tray) -->
+              <rect x="215" y="604" width="385" height="10" rx="2" fill="url(#evapTrayGrad)" stroke="#1a2830" stroke-width="1.2"/>
+
+              <!-- ── Fin blocks: 8 vertical aluminium fin sections (every 46px) ── -->
+              <!-- Each section = a tall narrow aluminium rect with inner groove lines -->
+              <!-- Block 1: x=225 -->
+              <rect x="226" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="234" y1="456" x2="234" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="242" y1="456" x2="242" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="250" y1="456" x2="250" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="258" y1="456" x2="258" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+              <!-- Block 2: x=272 -->
+              <rect x="272" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="280" y1="456" x2="280" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="288" y1="456" x2="288" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="296" y1="456" x2="296" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="304" y1="456" x2="304" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+              <!-- Block 3: x=318 -->
+              <rect x="318" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="326" y1="456" x2="326" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="334" y1="456" x2="334" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="342" y1="456" x2="342" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="350" y1="456" x2="350" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+              <!-- Block 4: x=364 -->
+              <rect x="364" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="372" y1="456" x2="372" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="380" y1="456" x2="380" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="388" y1="456" x2="388" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="396" y1="456" x2="396" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+              <!-- Block 5: x=410 -->
+              <rect x="410" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="418" y1="456" x2="418" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="426" y1="456" x2="426" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="434" y1="456" x2="434" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="442" y1="456" x2="442" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+              <!-- Block 6: x=456 -->
+              <rect x="456" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="464" y1="456" x2="464" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="472" y1="456" x2="472" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="480" y1="456" x2="480" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="488" y1="456" x2="488" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+              <!-- Block 7: x=502 -->
+              <rect x="502" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="510" y1="456" x2="510" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="518" y1="456" x2="518" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="526" y1="456" x2="526" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="534" y1="456" x2="534" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+              <!-- Block 8: x=548 -->
+              <rect x="548" y="456" width="36" height="145" rx="1" fill="url(#evapFinGrad)" stroke="#a8c8d8" stroke-width="0.6"/>
+              <line x1="556" y1="456" x2="556" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="564" y1="456" x2="564" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="572" y1="456" x2="572" y2="601" stroke="#c0d8e8" stroke-width="0.5" opacity="0.7"/>
+              <line x1="580" y1="456" x2="580" y2="601" stroke="#6890a8" stroke-width="0.5" opacity="0.6"/>
+
+              <!-- ── Copper refrigerant tube passes (3 horizontal rows through fins) ── -->
+              <!-- Row 1 (top): y=478 -->
+              <rect x="226" y="473" width="360" height="10" rx="5" fill="url(#evapTubeGrad)" stroke="#8a4810" stroke-width="0.8"/>
+              <rect x="226" y="474" width="360" height="3" rx="2" fill="#f5e0a8" opacity="0.45"/>
+              <!-- Row 2 (middle): y=516 -->
+              <rect x="226" y="511" width="360" height="10" rx="5" fill="url(#evapTubeGrad)" stroke="#8a4810" stroke-width="0.8"/>
+              <rect x="226" y="512" width="360" height="3" rx="2" fill="#f5e0a8" opacity="0.45"/>
+              <!-- Row 3 (lower): y=554 -->
+              <rect x="226" y="549" width="360" height="10" rx="5" fill="url(#evapTubeGrad)" stroke="#8a4810" stroke-width="0.8"/>
+              <rect x="226" y="550" width="360" height="3" rx="2" fill="#f5e0a8" opacity="0.45"/>
+
+              <!-- ── Right-side header / manifold (return bends) ── -->
+              <rect x="585" y="456" width="14" height="145" rx="3" fill="#5878a0" stroke="#3a5878" stroke-width="1.2"/>
+              <!-- 3 U-bend return connections at manifold -->
+              <path d="M 585,478 C 595,478 595,488 585,488" fill="none" stroke="url(#evapTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 585,516 C 595,516 595,526 585,526" fill="none" stroke="url(#evapTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 585,549 C 595,549 595,559 585,559" fill="none" stroke="url(#evapTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+
+              <!-- ── Left-side inlet / outlet ports ── -->
+              <!-- Liquid inlet port (from capillary, bottom row) -->
+              <rect x="205" y="550" width="22" height="8" rx="3" fill="#2e86c1" stroke="#1a5276" stroke-width="1.2"/>
+              <!-- Suction outlet port (to compressor, top row) -->
+              <rect x="205" y="474" width="22" height="8" rx="3" fill="#5a6872" stroke="#3a4852" stroke-width="1.2"/>
+
+              <!-- ── Frost / condensate glaze overlay (active when cooling) ── -->
+              <rect class="evap-frost-layer" x="226" y="456" width="360" height="145" rx="2" fill="url(#evapFrostGrad)" opacity="0"/>
+
+              <!-- ── Blower Fan Section ── -->
+              <rect x="602" y="453" width="68" height="155" rx="4" fill="#b8ccd8" stroke="#4b5f6b" stroke-width="1.5"/>
+              <!-- Air flow grille lines -->
+              <line x1="610" y1="465" x2="662" y2="465" stroke="#8098a8" stroke-width="0.8"/>
+              <line x1="610" y1="474" x2="662" y2="474" stroke="#8098a8" stroke-width="0.8"/>
+              <line x1="610" y1="483" x2="662" y2="483" stroke="#8098a8" stroke-width="0.8"/>
+              <g transform="translate(636,527)">
+                <!-- Duct ring -->
+                <circle r="44" fill="#d0e0ea" stroke="#5a6872" stroke-width="2"/>
+                <circle r="38" fill="none" stroke="#90a8b8" stroke-width="1" stroke-dasharray="3,2"/>
+                <!-- 6-blade cool blue fan -->
+                <g class="fan-rotor">
+                  <path d="M 0,-7 C -8,-13 -15,-22 -6,-33 C 4,-35 13,-26 7,-16 C 4,-11 3,-8 0,-7 Z" transform="rotate(0)"   fill="url(#evapFanGrad)" stroke="#1a365d" stroke-width="0.8"/>
+                  <path d="M 0,-7 C -8,-13 -15,-22 -6,-33 C 4,-35 13,-26 7,-16 C 4,-11 3,-8 0,-7 Z" transform="rotate(60)"  fill="url(#evapFanGrad)" stroke="#1a365d" stroke-width="0.8"/>
+                  <path d="M 0,-7 C -8,-13 -15,-22 -6,-33 C 4,-35 13,-26 7,-16 C 4,-11 3,-8 0,-7 Z" transform="rotate(120)" fill="url(#evapFanGrad)" stroke="#1a365d" stroke-width="0.8"/>
+                  <path d="M 0,-7 C -8,-13 -15,-22 -6,-33 C 4,-35 13,-26 7,-16 C 4,-11 3,-8 0,-7 Z" transform="rotate(180)" fill="url(#evapFanGrad)" stroke="#1a365d" stroke-width="0.8"/>
+                  <path d="M 0,-7 C -8,-13 -15,-22 -6,-33 C 4,-35 13,-26 7,-16 C 4,-11 3,-8 0,-7 Z" transform="rotate(240)" fill="url(#evapFanGrad)" stroke="#1a365d" stroke-width="0.8"/>
+                  <path d="M 0,-7 C -8,-13 -15,-22 -6,-33 C 4,-35 13,-26 7,-16 C 4,-11 3,-8 0,-7 Z" transform="rotate(300)" fill="url(#evapFanGrad)" stroke="#1a365d" stroke-width="0.8"/>
+                </g>
+                <!-- Hub -->
+                <circle r="11" fill="url(#chromeHubGrad)" stroke="#2b6cb0" stroke-width="1.5"/>
+                <circle r="4"  fill="#e2e8f0"/>
+              </g>
+
+              <!-- ── Cold shimmer lines (rising from top of coil when active) ── -->
+              <path class="cold-shimmer" id="evapShimmer1"
+                d="M255,450 L255,438 M320,450 L320,438 M390,450 L390,438 M460,450 L460,438 M530,450 L530,438"/>
+
+              <!-- ── Status indicator & Labels ── -->
+              <circle class="comp-indicator" cx="226" cy="462" r="6"/>
+              <text class="label-major" x="264" y="632">EVAPORATOR</text>
+              <text class="label-minor" x="264" y="648">(plate-fin coil — low pressure, low temp.)</text>
+            </g>
+
+            <!-- ============================================================
+                 CONDENSER — realistic plate-fin coil heat rejection unit
+                 Layout: x=265..715, y=62..275  |  Fan section: x=717..850, y=62..275
+                 Pipe connections: left inlet y=125 (hot gas in), right outlet y=125 (liquid out)
+                 ============================================================ -->
+            <g id="condenser" class="component state-off">
+
+              <!-- ── Steel frame / casing box ── -->
+              <!-- Top cap bar -->
+              <rect x="265" y="62" width="450" height="8" rx="2" fill="url(#condFrameGrad)" stroke="#1a1410" stroke-width="1.2"/>
+              <!-- Main aluminium body face -->
+              <rect x="265" y="70" width="355" height="200" fill="url(#condCaseGrad)" stroke="#5a5560" stroke-width="1.5"/>
+              <!-- Right-edge shadow strip (depth) -->
+              <rect x="617" y="70" width="6" height="200" fill="#48403a"/>
+              <!-- Bottom frame bar -->
+              <rect x="265" y="268" width="355" height="8" rx="2" fill="url(#condFrameGrad)" stroke="#1a1410" stroke-width="1.2"/>
+
+              <!-- ── Vertical aluminium fin blocks (6 blocks, each 54px wide) ── -->
+              <!-- Each block: tall narrow rect + inner groove lines (horizontal shadow lines for realism) -->
+
+              <!-- Block 1: x=273 -->
+              <rect x="273" y="73" width="50" height="192" rx="1" fill="url(#condFinGrad)" stroke="#b8bcbf" stroke-width="0.6"/>
+              <line x1="273" y1="97"  x2="323" y2="97"  stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="273" y1="121" x2="323" y2="121" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="273" y1="145" x2="323" y2="145" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="273" y1="169" x2="323" y2="169" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="273" y1="193" x2="323" y2="193" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="273" y1="217" x2="323" y2="217" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+              <line x1="273" y1="241" x2="323" y2="241" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+
+              <!-- Block 2: x=331 -->
+              <rect x="331" y="73" width="50" height="192" rx="1" fill="url(#condFinGrad)" stroke="#b8bcbf" stroke-width="0.6"/>
+              <line x1="331" y1="97"  x2="381" y2="97"  stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="331" y1="121" x2="381" y2="121" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="331" y1="145" x2="381" y2="145" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="331" y1="169" x2="381" y2="169" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="331" y1="193" x2="381" y2="193" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="331" y1="217" x2="381" y2="217" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+              <line x1="331" y1="241" x2="381" y2="241" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+
+              <!-- Block 3: x=389 -->
+              <rect x="389" y="73" width="50" height="192" rx="1" fill="url(#condFinGrad)" stroke="#b8bcbf" stroke-width="0.6"/>
+              <line x1="389" y1="97"  x2="439" y2="97"  stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="389" y1="121" x2="439" y2="121" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="389" y1="145" x2="439" y2="145" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="389" y1="169" x2="439" y2="169" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="389" y1="193" x2="439" y2="193" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="389" y1="217" x2="439" y2="217" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+              <line x1="389" y1="241" x2="439" y2="241" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+
+              <!-- Block 4: x=447 -->
+              <rect x="447" y="73" width="50" height="192" rx="1" fill="url(#condFinGrad)" stroke="#b8bcbf" stroke-width="0.6"/>
+              <line x1="447" y1="97"  x2="497" y2="97"  stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="447" y1="121" x2="497" y2="121" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="447" y1="145" x2="497" y2="145" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="447" y1="169" x2="497" y2="169" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="447" y1="193" x2="497" y2="193" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="447" y1="217" x2="497" y2="217" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+              <line x1="447" y1="241" x2="497" y2="241" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+
+              <!-- Block 5: x=505 -->
+              <rect x="505" y="73" width="50" height="192" rx="1" fill="url(#condFinGrad)" stroke="#b8bcbf" stroke-width="0.6"/>
+              <line x1="505" y1="97"  x2="555" y2="97"  stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="505" y1="121" x2="555" y2="121" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="505" y1="145" x2="555" y2="145" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="505" y1="169" x2="555" y2="169" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="505" y1="193" x2="555" y2="193" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="505" y1="217" x2="555" y2="217" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+              <line x1="505" y1="241" x2="555" y2="241" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+
+              <!-- Block 6: x=563 -->
+              <rect x="563" y="73" width="50" height="192" rx="1" fill="url(#condFinGrad)" stroke="#b8bcbf" stroke-width="0.6"/>
+              <line x1="563" y1="97"  x2="613" y2="97"  stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="563" y1="121" x2="613" y2="121" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="563" y1="145" x2="613" y2="145" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="563" y1="169" x2="613" y2="169" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="563" y1="193" x2="613" y2="193" stroke="#d0d4d8" stroke-width="0.5" opacity="0.8"/>
+              <line x1="563" y1="217" x2="613" y2="217" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+              <line x1="563" y1="241" x2="613" y2="241" stroke="#909498" stroke-width="0.5" opacity="0.7"/>
+
+              <!-- ── Copper refrigerant tube passes (4 horizontal rows through fin blocks) ── -->
+              <!-- Row 1 (top, hot gas in): y=91 -->
+              <rect x="273" y="88"  width="344" height="10" rx="5" fill="url(#condTubeGrad)" stroke="#884010" stroke-width="0.8"/>
+              <rect x="273" y="89"  width="344" height="3"  rx="2" fill="#fef0c0" opacity="0.5"/>
+              <!-- Row 2: y=115 -->
+              <rect x="273" y="112" width="344" height="10" rx="5" fill="url(#condTubeGrad)" stroke="#884010" stroke-width="0.8"/>
+              <rect x="273" y="113" width="344" height="3"  rx="2" fill="#fef0c0" opacity="0.5"/>
+              <!-- Row 3: y=140 -->
+              <rect x="273" y="136" width="344" height="10" rx="5" fill="url(#condTubeGrad)" stroke="#884010" stroke-width="0.8"/>
+              <rect x="273" y="137" width="344" height="3"  rx="2" fill="#fef0c0" opacity="0.5"/>
+              <!-- Row 4 (liquid out): y=165 -->
+              <rect x="273" y="160" width="344" height="10" rx="5" fill="url(#condTubeGrad)" stroke="#884010" stroke-width="0.8"/>
+              <rect x="273" y="161" width="344" height="3"  rx="2" fill="#fef0c0" opacity="0.5"/>
+              <!-- Row 5: y=190 -->
+              <rect x="273" y="184" width="344" height="10" rx="5" fill="url(#condTubeGrad)" stroke="#884010" stroke-width="0.8"/>
+              <rect x="273" y="185" width="344" height="3"  rx="2" fill="#fef0c0" opacity="0.5"/>
+              <!-- Row 6: y=215 -->
+              <rect x="273" y="209" width="344" height="10" rx="5" fill="url(#condTubeGrad)" stroke="#884010" stroke-width="0.8"/>
+              <rect x="273" y="210" width="344" height="3"  rx="2" fill="#fef0c0" opacity="0.5"/>
+              <!-- Row 7: y=240 -->
+              <rect x="273" y="234" width="344" height="10" rx="5" fill="url(#condTubeGrad)" stroke="#884010" stroke-width="0.8"/>
+              <rect x="273" y="235" width="344" height="3"  rx="2" fill="#fef0c0" opacity="0.5"/>
+
+              <!-- ── Bottom manifold / header (return bends at right side) ── -->
+              <rect x="617" y="73" width="12" height="192" rx="3" fill="#786858" stroke="#584840" stroke-width="1.2"/>
+              <!-- U-bend returns on right side manifold -->
+              <path d="M 617,93  C 626,93  626,103 617,103"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 617,117 C 626,117 626,127 617,127"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 617,141 C 626,141 626,151 617,151"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 617,165 C 626,165 626,175 617,175"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 617,189 C 626,189 626,199 617,199"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 617,213 C 626,213 626,223 617,223"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+
+              <!-- ── Left manifold (hot gas in, liquid out) ── -->
+              <rect x="256" y="73" width="18" height="192" rx="3" fill="#786858" stroke="#584840" stroke-width="1.2"/>
+              <!-- U-bends at left side -->
+              <path d="M 274,103 C 265,103 265,113 274,113"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 274,127 C 265,127 265,137 274,137"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 274,151 C 265,151 265,161 274,161"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 274,175 C 265,175 265,185 274,185"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 274,199 C 265,199 265,209 274,209"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+              <path d="M 274,223 C 265,223 265,233 274,233"  fill="none" stroke="url(#condTubeGrad)" stroke-width="6" stroke-linecap="round"/>
+
+              <!-- ── Hot gas inlet port (left, top row → connects to red pipe at y=93) ── -->
+              <rect x="244" y="89" width="16" height="9" rx="3" fill="#c0392b" stroke="#7b241c" stroke-width="1.2"/>
+
+              <!-- ── Heat glaze overlay (warm orange shimmer when condensing) ── -->
+              <rect class="cond-heat-layer" x="273" y="73" width="344" height="192" rx="2" fill="url(#condHeatGlazGrad)" opacity="0"/>
+
+              <!-- ── Fan section (graphite cooling fan — right side) ── -->
+              <rect x="629" y="62" width="121" height="214" rx="4" fill="#c2c8cc" stroke="#4b5157" stroke-width="1.5"/>
+              <!-- Air flow grille at top -->
+              <line x1="637" y1="74" x2="742" y2="74" stroke="#8a9098" stroke-width="0.9"/>
+              <line x1="637" y1="83" x2="742" y2="83" stroke="#8a9098" stroke-width="0.9"/>
+              <line x1="637" y1="92" x2="742" y2="92" stroke="#8a9098" stroke-width="0.9"/>
+
+              <!-- Row 7 tube pass curving down to bottom outlet collar -->
+              <path d="M 617,239 C 642,239 660,250 660,276" fill="none" stroke="url(#condTubeGrad)" stroke-width="7" stroke-linecap="round"/>
+              <path d="M 617,238 C 642,238 659,249 659,274" fill="none" stroke="#fef0c0" stroke-width="2" opacity="0.45"/>
+
+              <!-- Liquid outlet port (bottom of condenser fan housing → drops to capillary) -->
+              <rect x="653" y="271" width="14" height="10" rx="3" fill="#7b241c" stroke="#4a1510" stroke-width="1.2"/>
+
+              <!-- Fan duct ring + rotor -->
+              <g transform="translate(689,168)">
+                <!-- Outer duct housing -->
+                <circle r="52" fill="#d2d8dc" stroke="#5a6065" stroke-width="2"/>
+                <circle r="46" fill="none" stroke="#98a0a8" stroke-width="1" stroke-dasharray="4,2"/>
+                <!-- 6-blade graphite fan rotor -->
+                <g class="fan-rotor">
+                  <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(0)"   fill="url(#condFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                  <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(60)"  fill="url(#condFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                  <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(120)" fill="url(#condFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                  <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(180)" fill="url(#condFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                  <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(240)" fill="url(#condFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                  <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(300)" fill="url(#condFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                </g>
+                <!-- Chrome hub -->
+                <circle r="13" fill="url(#chromeHubGrad)" stroke="#475569" stroke-width="1.5"/>
+                <circle r="4.5" fill="#1e293b"/>
+              </g>
+
+              <!-- ── Heat shimmer (rising hot air from condenser top) ── -->
+              <path class="heat-shimmer" id="condShimmer1"
+                d="M298,57 L298,44 M356,57 L356,44 M414,57 L414,44 M472,57 L472,44 M530,57 L530,44 M588,57 L588,44"/>
+
+              <!-- ── Status indicator & Labels ── -->
+              <circle class="comp-indicator" cx="277" cy="80" r="6"/>
+              <text class="label-major" x="307" y="300">CONDENSER</text>
+              <text class="label-minor" x="307" y="315">(plate-fin coil — high pressure, high temp.)</text>
+            </g>
+
+
+
+            <!-- ============================================================
+                 CAPILLARY TUBE — horizontal copper helical coil (expansion device)
+                 ============================================================ -->
+            <g id="capillaryTube" class="component state-off">
+              <!-- Inlet transition / collar on red line -->
+              <rect x="736" y="284" width="24" height="12" rx="3" fill="#c0392b" stroke="#7b241c" stroke-width="1.5"/>
+              <rect x="756" y="286" width="8" height="8" rx="2" fill="#c87228" stroke="#843a08" stroke-width="1"/>
+
+              <!-- Back coil turns (depth behind) -->
+              <path class="cap-coil-back" d="M 792,322 C 790,332 794,268 798,258 M 810,322 C 808,332 812,268 816,258 M 828,322 C 826,332 830,268 834,258 M 846,322 C 844,332 848,268 852,258 M 864,322 C 862,332 866,268 870,258 M 882,322 C 880,332 884,268 888,258 M 900,322 C 898,332 902,268 906,258 M 918,322 C 916,332 920,268 924,258 M 936,322 C 934,332 938,268 942,258" fill="none" stroke="url(#copperBackGrad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- Active glow effect along the helical spiral path -->
+              <g class="capillary-glow" id="capillaryGlow">
+                <path d="M 760,290 C 770,290 775,258 780,258 M 780,258 C 782,248 796,312 792,322 M 792,322 C 790,332 794,268 798,258 M 798,258 C 800,248 814,312 810,322 M 810,322 C 808,332 812,268 816,258 M 816,258 C 818,248 832,312 828,322 M 828,322 C 826,332 830,268 834,258 M 834,258 C 836,248 850,312 846,322 M 846,322 C 844,332 848,268 852,258 M 852,258 C 854,248 868,312 864,322 M 864,322 C 862,332 866,268 870,258 M 870,258 C 872,248 886,312 882,322 M 882,322 C 880,332 884,268 888,258 M 888,258 C 890,248 904,312 900,322 M 900,322 C 898,332 902,268 906,258 M 906,258 C 908,248 922,312 918,322 M 918,322 C 916,332 920,268 924,258 M 924,258 C 926,248 940,312 936,322 M 936,322 C 934,332 938,268 942,258 M 942,258 C 944,248 958,312 954,322 M 954,322 C 959,332 964,290 974,290" fill="none" stroke="#4fb3ef" stroke-width="11" opacity="0.65" stroke-linecap="round" stroke-linejoin="round"/>
+              </g>
+
+              <!-- Front coil turns with copper gradient -->
+              <path class="cap-coil-front" d="M 760,290 C 770,290 775,258 780,258 M 780,258 C 782,248 796,312 792,322 M 798,258 C 800,248 814,312 810,322 M 816,258 C 818,248 832,312 828,322 M 834,258 C 836,248 850,312 846,322 M 852,258 C 854,248 868,312 864,322 M 870,258 C 872,248 886,312 882,322 M 888,258 C 890,248 904,312 900,322 M 906,258 C 908,248 922,312 918,322 M 924,258 C 926,248 940,312 936,322 M 942,258 C 944,248 958,312 954,322 M 954,322 C 959,332 964,290 974,290" fill="none" stroke="url(#copperFrontGrad)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- Specular highlight streak on front copper tube -->
+              <path class="cap-coil-shine" d="M 760,290 C 770,290 775,258 780,258 M 780,258 C 782,248 796,312 792,322 M 798,258 C 800,248 814,312 810,322 M 816,258 C 818,248 832,312 828,322 M 834,258 C 836,248 850,312 846,322 M 852,258 C 854,248 868,312 864,322 M 870,258 C 872,248 886,312 882,322 M 888,258 C 890,248 904,312 900,322 M 906,258 C 908,248 922,312 918,322 M 924,258 C 926,248 940,312 936,322 M 942,258 C 944,248 958,312 954,322 M 954,322 C 959,332 964,290 974,290" fill="none" stroke="#fff4e0" stroke-width="1.8" opacity="0.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- Outlet transition / collar on blue line -->
+              <rect x="970" y="286" width="8" height="8" rx="2" fill="#c87228" stroke="#843a08" stroke-width="1"/>
+              <rect x="978" y="284" width="24" height="12" rx="3" fill="#2e86c1" stroke="#1a5276" stroke-width="1.5"/>
+
+              <!-- Component Status Indicator Lamp -->
+              <circle class="comp-indicator" cx="770" cy="246" r="6"/>
+
+              <!-- Capillary Tube Badge (matches image style) -->
+              <g transform="translate(867,362)">
+                <rect x="-85" y="-12" width="170" height="24" rx="12" fill="#1b4d79" stroke="#123452" stroke-width="1.5"/>
+                <circle cx="-68" cy="0" r="8" fill="#ffffff"/>
+                <text x="-68" y="4" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="bold" fill="#1b4d79">3</text>
+                <text x="-54" y="4" font-family="'Segoe UI', Arial, sans-serif" font-size="11" font-weight="bold" fill="#ffffff">Capillary Tube</text>
+              </g>
+              <text class="label-minor" x="867" y="394" text-anchor="middle">Capillary Tube (Expansion Device)</text>
+              <text class="label-minor" x="867" y="408" text-anchor="middle">(fixed orifice — pressure drop)</text>
+            </g>
+
+            <!-- ============================================================
+                 COMPRESSOR — upright hermetic canister (sleek light-grey metallic, matches reference)
+                 ============================================================ -->
+            <g id="compressor" class="component state-off">
+
+              <!-- ── Base mounting platform ── -->
+              <!-- Flat base plate with chamfered corners -->
+              <rect x="52" y="380" width="192" height="10" rx="3" fill="url(#compBasePlateGrad)" stroke="#4b535a" stroke-width="1.5"/>
+              
+              <!-- Rubber isolation feet underneath -->
+              <rect x="62" y="390" width="22" height="8" rx="2" fill="#2d3339" stroke="#1c2024" stroke-width="1"/>
+              <rect x="212" y="390" width="22" height="8" rx="2" fill="#2d3339" stroke="#1c2024" stroke-width="1"/>
+              
+              <!-- Mounting bolt caps on base plate -->
+              <circle cx="73" cy="385" r="3" fill="#d0d5da" stroke="#5a626a" stroke-width="0.8"/>
+              <circle cx="223" cy="385" r="3" fill="#d0d5da" stroke="#5a626a" stroke-width="0.8"/>
+
+              <!-- ── Main canister capsule body with flared base (Sleek light grey metallic) ── -->
+              <path d="M 88,205 C 88,148 208,148 208,205 L 208,350 C 208,368 230,377 236,380 L 60,380 C 66,377 88,368 88,350 Z"
+                    fill="url(#compBodyGradLight)" stroke="#4b535a" stroke-width="2.2" stroke-linejoin="round"/>
+
+              <!-- ── Domed top cap shading overlay ── -->
+              <path d="M 89,205 C 89,150 207,150 207,205 C 175,198 121,198 89,205 Z"
+                    fill="url(#compTopDomeGrad)" opacity="0.6"/>
+
+              <!-- ── Specular vertical light reflection beam down left side ── -->
+              <path d="M 112,175 L 112,356" stroke="#ffffff" stroke-width="7" opacity="0.30" stroke-linecap="round"/>
+              <path d="M 112,175 L 112,356" stroke="#ffffff" stroke-width="2" opacity="0.65" stroke-linecap="round"/>
+              
+              <!-- Subtle right-edge contour shadow for 3D depth -->
+              <path d="M 206,195 L 206,350" stroke="#000000" stroke-width="4" opacity="0.18" stroke-linecap="round"/>
+
+              <!-- ── Suction port collar (left side entry at y=293) ── -->
+              <rect x="74" y="284" width="16" height="18" rx="3" fill="url(#compBasePlateGrad)" stroke="#4b535a" stroke-width="1.4"/>
+              <circle cx="82" cy="293" r="4" fill="#2e86c1"/>
+
+              <!-- ── Discharge port collar (right side exit at y=200) ── -->
+              <rect x="206" y="191" width="16" height="18" rx="3" fill="url(#compBasePlateGrad)" stroke="#4b535a" stroke-width="1.4"/>
+              <circle cx="214" cy="200" r="4" fill="#c0392b"/>
+
+              <!-- ── Front rounded square terminal panel / inspection window ── -->
+              <rect x="119" y="248" width="58" height="62" rx="15" fill="#6c747c" opacity="0.45"/>
+              <rect x="121" y="250" width="54" height="58" rx="14" fill="url(#compFrontPanelGrad)" stroke="#4a5158" stroke-width="1.8"/>
+              <rect x="123" y="252" width="50" height="54" rx="12" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.45"/>
+
+              <!-- ── Inner motor core & heartbeat pulse (visible inside front panel) ── -->
+              <g id="compressorMotor" transform="translate(148,279)">
+                <!-- Inner motor cavity -->
+                <circle r="21" fill="url(#compWindowInnerGrad)" stroke="#3a4147" stroke-width="1.5"/>
+                <!-- Glowing green motor heartbeat pulse when active -->
+                <circle r="19" fill="url(#motorGlowGrad)" opacity="0" class="compressor-pulse"/>
+                <!-- Stator slots & rotor hub -->
+                <path d="M -16,0 L -11,0 M 11,0 L 16,0 M 0,-16 L 0,-11 M 0,11 L 0,16" stroke="#48bb78" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                <circle r="9" fill="url(#chromeHubGrad)" stroke="#4b5563" stroke-width="1.2"/>
+                <circle r="3" fill="#1c2228"/>
+              </g>
+
+              <!-- ── Status indicator lamp ── -->
+              <circle class="comp-indicator" cx="95" cy="180" r="6"/>
+
+              <!-- ── Text labels matching image ── -->
+              <text class="label-major" x="148" y="420" text-anchor="middle">Compressor</text>
+              <text class="label-minor" x="148" y="434" text-anchor="middle">(hermetic canister — R-134a)</text>
+            </g>
+
+            <!-- ============================================================
+                 SENSORS  (probes with live readout text)
+                 ============================================================ -->
+
+            <!-- Discharge line — between compressor and condenser -->
+            <g class="sensor-probe" transform="translate(230,105)">
+              <circle r="8"/>
+              <line class="sensor-crosshair" x1="-8" y1="0" x2="8" y2="0"/>
+              <line class="sensor-crosshair" x1="0" y1="-8" x2="0" y2="8"/>
+              <text class="label-minor"                               x="-13" y="-13" text-anchor="end">DISCHARGE LINE</text>
+              <text class="sensor-readout hot" id="svgDischargePressure" x="-13" y="4" text-anchor="end">1.0 bar</text>
+              <text class="sensor-readout hot" id="svgDischargeTemp"     x="-13" y="18" text-anchor="end">24.0°C</text>
+            </g>
+
+            <!-- Condenser outlet / liquid line — before capillary -->
+            <g class="sensor-probe" transform="translate(660,318)">
+              <circle r="7"/>
+              <line class="sensor-crosshair" x1="-7" y1="0" x2="7" y2="0"/>
+              <line class="sensor-crosshair" x1="0" y1="-7" x2="0" y2="7"/>
+              <text class="label-minor"                                   x="13" y="-8">COND. OUTLET T</text>
+              <text class="sensor-readout" id="svgCondenserOutletTemp"    x="13" y="8">24.0°C</text>
+            </g>
+
+            <!-- Evaporator inlet — after capillary expansion -->
+            <g class="sensor-probe" transform="translate(1025,385)">
+              <circle r="7"/>
+              <line class="sensor-crosshair" x1="-7" y1="0" x2="7" y2="0"/>
+              <line class="sensor-crosshair" x1="0" y1="-7" x2="0" y2="7"/>
+              <text class="label-minor"                                       x="-56" y="-8">EVAP. INLET T</text>
+              <text class="sensor-readout cool" id="svgEvaporatorInletTemp"  x="-56" y="8">24.0°C</text>
+            </g>
+
+            <!-- Evaporator outlet / suction line -->
+            <g class="sensor-probe" transform="translate(415,525)">
+              <circle r="7"/>
+              <line class="sensor-crosshair" x1="-7" y1="0" x2="7" y2="0"/>
+              <line class="sensor-crosshair" x1="0" y1="-7" x2="0" y2="7"/>
+              <text class="label-minor"                                        x="-50" y="-13">EVAP. OUTLET T</text>
+              <text class="sensor-readout cool" id="svgEvaporatorOutletTemp"  x="-50" y="5">24.0°C</text>
+            </g>
+
+            <!-- Suction pressure — near compressor inlet -->
+            <g class="sensor-probe" transform="translate(133,525)">
+              <circle r="8"/>
+              <line class="sensor-crosshair" x1="-8" y1="0" x2="8" y2="0"/>
+              <line class="sensor-crosshair" x1="0" y1="-8" x2="0" y2="8"/>
+              <text class="label-minor"                             x="-40" y="-14">SUCTION P</text>
+              <text class="sensor-readout" id="svgSuctionPressure" x="-40" y="4">1.0 bar</text>
+            </g>
+
+            <!-- ============================================================
+                 FLOW LEGEND (bottom-right)
+                 ============================================================ -->
+            <g transform="translate(740,586)">
+              <rect x="-6" y="-10" width="235" height="68" rx="3" fill="#f4f5f6" stroke="#9aa0a6" stroke-width="1"/>
+              <text class="label-minor" x="0" y="2" font-weight="700">Refrigerant Flow</text>
+              <line x1="0" y1="16" x2="36" y2="16" stroke="#c0392b" stroke-width="3" marker-end="url(#arrowHot)"/>
+              <text class="label-minor" x="42" y="20">High-P hot gas / liquid</text>
+              <line x1="0" y1="33" x2="36" y2="33" stroke="#1a5276" stroke-width="3" marker-end="url(#arrowCold)"/>
+              <text class="label-minor" x="42" y="37">Low-P cold vapour</text>
+              <circle cx="6" cy="50" r="4" fill="#2d7a4f"/>
+              <circle cx="18" cy="50" r="4" fill="#2d7a4f"/>
+              <circle cx="30" cy="50" r="4" fill="#2d7a4f"/>
+              <text class="label-minor" x="42" y="54">Capillary tube coil</text>
+            </g>
+
+            <!-- ============================================================
+                 REFRIGERANT FLOW DOTS (cx/cy updated by JS animation loop)
+                 ============================================================ -->
+            <g id="refrigerantFlow"></g>
+
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- CONTROL STRIP ---------------- -->
+    <section class="panel">
+      <div class="panel-header"><span>Simulation Mode & Controls</span></div>
+      <div class="panel-body">
+        
+        <!-- Mode Switcher Tabs -->
+        <div class="mode-switcher">
+          <button type="button" id="tabLiveMode" class="mode-tab active live">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2ecc71;"></span>
+            LIVE SIMULATION
+          </button>
+          <button type="button" id="tabHistMode" class="mode-tab">
+            <span>⏱</span>
+            TIME / HISTORICAL PLAYBACK
+          </button>
+        </div>
+
+        <!-- 1. LIVE MODE CONTROLS -->
+        <div id="liveControlsSection" class="mode-section">
+          <div class="control-strip">
+            <div class="control-group">
+              <span class="control-label">Live System Command</span>
+              <div class="control-row">
+                <button id="btnStart" class="btn-start">Start</button>
+                <button id="btnStop" class="btn-stop">Stop</button>
+                <button id="btnSaveSnapshot" type="button" style="padding: 8px 12px; font-size: 11px;">💾 Log Now</button>
+              </div>
+            </div>
+            <div class="control-group" style="margin-left: auto;">
+              <span class="control-label">PostgreSQL Database (AC Simulatiom)</span>
+              <div class="control-row">
+                <span id="dbSaveStatus" class="db-status-badge">● Auto-saving to PostgreSQL every 5s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. TIME / HISTORICAL REPLAY CONTROLS (initially hidden) -->
+        <div id="histControlsSection" class="mode-section" style="display: none;">
+          
+          <!-- Query / Range selection row -->
+          <div class="hist-query-row">
+            <div class="hist-field">
+              <label for="histStartTime">Start Time</label>
+              <input type="datetime-local" id="histStartTime" class="hist-input" step="1">
+            </div>
+
+            <div class="hist-field">
+              <label for="histDuration">Duration / Range</label>
+              <select id="histDuration" class="hist-select">
+                <option value="5m" selected>Last 5 Minutes</option>
+                <option value="15m">Last 15 Minutes</option>
+                <option value="30m">Last 30 Minutes</option>
+                <option value="1h">Last 1 Hour</option>
+                <option value="all">All Available Records</option>
+                <option value="custom">Custom End Time</option>
+              </select>
+            </div>
+
+            <div class="hist-field" id="histEndTimeWrap" style="display: none;">
+              <label for="histEndTime">End Time</label>
+              <input type="datetime-local" id="histEndTime" class="hist-input" step="1">
+            </div>
+
+            <div class="hist-field" style="justify-content: flex-end;">
+              <button type="button" id="btnFetchHistory" class="btn-hist-load">📥 Load Records</button>
+            </div>
+
+            <div class="hist-field" style="margin-left: auto; align-items: flex-end;">
+              <div style="display: flex; gap: 4px;">
+                <button type="button" id="btnQuickAll" class="btn-preset" title="Replay Full Dataset">All Records</button>
+                <button type="button" id="btnQuick5m" class="btn-preset">Last 5m</button>
+                <button type="button" id="btnQuick15m" class="btn-preset">Last 15m</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timeline Scrubber & Playback bar -->
+          <div class="hist-player-row">
+            
+            <div class="hist-scrubber-wrap">
+              <span style="font-size: 11px; font-weight: bold; color: var(--c-text-dim);">TIMELINE</span>
+              <input type="range" id="histScrubber" class="hist-slider" min="0" max="100" value="0" disabled>
+              <span id="histCurrentTime" class="hist-time-badge">--:--:--</span>
+            </div>
+
+            <div class="hist-controls-bar">
+              <div class="hist-btn-group">
+                <button type="button" id="btnHistPrev" class="btn-hist-step" title="Previous Frame" disabled>⏮ Step</button>
+                <button type="button" id="btnHistPlay" class="btn-hist-play" disabled>▶ Play</button>
+                <button type="button" id="btnHistNext" class="btn-hist-step" title="Next Frame" disabled>⏭ Step</button>
+                <button type="button" id="btnHistStop" class="btn-hist-step" title="Reset to Start" disabled>⏹ Reset</button>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:12px;">
+                <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--c-text-dim); cursor:pointer;">
+                  <input type="checkbox" id="chkHistLoop" checked style="cursor:pointer;"> 🔁 Loop
+                </label>
+
+                <div class="hist-speed-wrap">
+                  <span>SPEED:</span>
+                  <select id="histSpeedSelect" class="hist-select" style="padding: 4px 6px;">
+                    <option value="0.5">0.5x</option>
+                    <option value="1.0" selected>1.0x</option>
+                    <option value="2.0">2.0x</option>
+                    <option value="5.0">5.0x</option>
+                    <option value="10.0">10.0x</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="histStatusMsg" class="hist-info-msg">Loading records from PostgreSQL...</div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------------- RIGHT COLUMN ---------------- -->
+  <div class="side-column">
+
+    <section class="panel">
+      <div class="panel-header"><span>System Status</span></div>
+      <div class="panel-body status-grid">
+        <div class="status-item">
+          <span class="status-label">System Status</span>
+          <span class="status-value"><span class="status-lamp" id="lampSystemStatus"></span><span id="valSystemStatus">STOPPED</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Compressor</span>
+          <span class="status-value"><span class="status-lamp" id="lampCompressor"></span><span id="valCompressor">OFF</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Condenser</span>
+          <span class="status-value"><span class="status-lamp" id="lampCondenser"></span><span id="valCondenser">IDLE</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Evaporator</span>
+          <span class="status-value"><span class="status-lamp" id="lampEvaporator"></span><span id="valEvaporator">IDLE</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Capillary Tube</span>
+          <span class="status-value"><span class="status-lamp" id="lampCapillary"></span><span id="valCapillary">IDLE</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header"><span>Live Parameters</span></div>
+      <div class="panel-body params-grid">
+        <!-- 1. Compressor -->
+        <div class="param-box">
+          <div class="param-label">Compressor Suction P</div>
+          <div class="param-value" id="pvSuctionP">1.0 bar</div>
+        </div>
+        <div class="param-box warm">
+          <div class="param-label">Compressor Discharge P</div>
+          <div class="param-value" id="pvDischargeP">1.0 bar</div>
+        </div>
+
+        <!-- 2. Condenser -->
+        <div class="param-box warm">
+          <div class="param-label">Condenser Inlet Temp.</div>
+          <div class="param-value" id="pvCondInTemp">24.0 °C</div>
+        </div>
+        <div class="param-box blue">
+          <div class="param-label">Condenser Outlet Temp.</div>
+          <div class="param-value" id="pvCondOutTemp">24.0 °C</div>
+        </div>
+
+        <!-- 3. Expansion Valve (Capillary Tube) -->
+        <div class="param-box blue">
+          <div class="param-label">Expansion Valve Inlet T</div>
+          <div class="param-value" id="pvExpInTemp">24.0 °C</div>
+        </div>
+        <div class="param-box blue">
+          <div class="param-label">Expansion Valve Outlet T</div>
+          <div class="param-value" id="pvExpOutTemp">24.0 °C</div>
+        </div>
+
+        <!-- 4. Evaporator -->
+        <div class="param-box blue">
+          <div class="param-label">Evaporator Inlet Temp.</div>
+          <div class="param-value" id="pvEvapInTemp">24.0 °C</div>
+        </div>
+        <div class="param-box blue">
+          <div class="param-label">Evaporator Outlet Temp.</div>
+          <div class="param-value" id="pvEvapOutTemp">24.0 °C</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ---------------- EVENT LOG (full width) ---------------- -->
+  <section class="panel log-panel">
+    <div class="panel-header"><span>Event Log</span></div>
+    <ul class="log-list" id="eventLog"></ul>
+  </section>
+
+</main>
+
+<script src="refrigerator/static/refrigerator/js/simulation.js?v=2.1"></script>
+<script src="refrigerator/static/refrigerator/js/history.js?v=2.1"></script>
+<script src="refrigerator/static/refrigerator/js/ui.js?v=2.1"></script>
+<script src="refrigerator/static/refrigerator/js/app.js?v=2.1"></script>
+</body>
+</html>

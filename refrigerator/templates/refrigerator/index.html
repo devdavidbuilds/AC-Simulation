@@ -1,0 +1,729 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AHU / Air-Side Simulation â€” {{ unit_tag }}</title>
+<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=3.4">
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="hmi-header">
+  <div class="title-block">
+    <div class="system-title">AHU / Air-Side Simulation</div>
+    <div class="zone-subtitle">{{ plant_name }} &nbsp;â€”&nbsp; {{ unit_name }} &nbsp;â€”&nbsp; {{ unit_tag }}</div>
+  </div>
+  <div class="meta-block">
+    <div class="meta-item">
+      <span class="meta-label">Date</span>
+      <span class="meta-value" id="hdrDate">--</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Time</span>
+      <span class="meta-value" id="hdrTime">--</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Operator</span>
+      <span class="meta-value">MADHUMANOJ</span>
+    </div>
+    <div class="meta-item mode-live" id="hdrModeItem">
+      <span class="meta-label">Simulation Mode</span>
+      <span class="meta-value" id="hdrModeVal">LIVE</span>
+    </div>
+  </div>
+</header>
+
+<!-- PAGE NAVIGATION -->
+<nav class="page-nav">
+  <a href="/" class="page-nav-link active">AHU / Air-Side Simulation</a>
+  <a href="/refrigeration/" class="page-nav-link">Refrigeration Cycle Simulation</a>
+</nav>
+
+<!-- ============================================================
+     MAIN LAYOUT
+     ============================================================ -->
+<main class="hmi-main ahu-page-layout">
+
+
+
+    <!-- ---------------- AHU / BMS CONTROL PANEL ---------------- -->
+    <section class="panel actuator-panel ahu-bms-panel">
+      <div class="panel-header">
+        <span>First Floor Zone 01 â€” Air Handling Unit â€” AHU01</span>
+        <span class="actuator-header-state"><span class="status-lamp" id="actVfdLed"></span><span id="actFanStatus">OFF</span></span>
+      </div>
+      <div class="panel-body ahu-bms-body">
+        <div class="ahu-bms-grid">
+          <div class="ahu-main-card">
+            <div class="ahu-instrument-strip">
+              <div class="ahu-instrument"><span>RETURN AIR TEMP.</span><strong id="ahuReturnTemp">24.0 Â°C</strong></div>
+              <div class="ahu-instrument"><span>COOLING VALVE CMD</span><strong id="ahuValveCmd">60 %</strong></div>
+              <div class="ahu-instrument"><span>COOLING VALVE STS</span><strong id="ahuValveStatus">OPEN</strong></div>
+              <div class="ahu-instrument"><span>AIR FLOW STS</span><strong id="ahuCfm">0 CFM</strong></div>
+              <div class="ahu-instrument"><span>SUPPLY AIR TEMP.</span><strong id="ahuSupplyTemp">24.0 Â°C</strong></div>
+              <div class="ahu-instrument"><span>SUPPLY STATIC PRESSURE</span><strong id="ahuStaticPressure">0 Pa</strong></div>
+            </div>
+
+            <div class="ahu-graphic-wrap">
+              <svg id="ahuSvg" viewBox="0 0 1180 550" xmlns="http://www.w3.org/2000/svg" aria-label="Animated air handling unit">
+                <defs>
+                  <linearGradient id="ahuShell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8fafb"/><stop offset="0.5" stop-color="#d5dde2"/><stop offset="1" stop-color="#9ca8af"/></linearGradient>
+                  <linearGradient id="ahuCoilFace" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e1e7ea"/><stop offset="0.5" stop-color="#b9c5ca"/><stop offset="1" stop-color="#89969c"/></linearGradient>
+                  <linearGradient id="ahuHeatCoilFace" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff1e7"/><stop offset="0.5" stop-color="#f6b17f"/><stop offset="1" stop-color="#c95b37"/></linearGradient>
+                  <linearGradient id="ahuFanFace" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#edf3f6"/><stop offset="1" stop-color="#9aa8b0"/></linearGradient>
+                  <linearGradient id="ahuCondFanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#94a3b8"/><stop offset="45%" stop-color="#475569"/><stop offset="100%" stop-color="#1e293b"/>
+                  </linearGradient>
+                  <radialGradient id="ahuChromeHubGrad" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stop-color="#ffffff"/><stop offset="40%" stop-color="#cbd5e0"/><stop offset="80%" stop-color="#718096"/><stop offset="100%" stop-color="#2d3748"/>
+                  </radialGradient>
+                  <linearGradient id="ahuVfdFace" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#303941"/><stop offset="0.55" stop-color="#151a1f"/><stop offset="1" stop-color="#070a0d"/></linearGradient>
+                  <linearGradient id="ahuAirBlue" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#9ddcff"/><stop offset="1" stop-color="#1976b8"/></linearGradient>
+                  <linearGradient id="ahuAirflowTransition" gradientUnits="userSpaceOnUse" x1="257" y1="178" x2="1135" y2="178">
+                    <stop id="ahuAirGradientStop0" offset="0" stop-color="#91b5c3" stop-opacity=".8"/>
+                    <stop id="ahuAirGradientStop1" offset=".117" stop-color="#91b5c3" stop-opacity=".8"/>
+                    <stop id="ahuAirGradientStop2" offset=".265" stop-color="#2a85be" stop-opacity=".8"/>
+                    <stop id="ahuAirGradientStop3" offset=".288" stop-color="#2a85be" stop-opacity=".8"/>
+                    <stop id="ahuAirGradientStop4" offset=".436" stop-color="#46bdd6" stop-opacity=".8"/>
+                    <stop id="ahuAirGradientStop5" offset="1" stop-color="#d99a72" stop-opacity=".8"/>
+                  </linearGradient>
+
+                  <!-- Industrial AHU Casing & Duct Gradients -->
+                  <linearGradient id="ahuCasingOuter" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#4a5660"/>
+                    <stop offset="3%" stop-color="#7e8c97"/>
+                    <stop offset="12%" stop-color="#cfd7dc"/>
+                    <stop offset="50%" stop-color="#b0bcc3"/>
+                    <stop offset="88%" stop-color="#8a97a1"/>
+                    <stop offset="97%" stop-color="#55626c"/>
+                    <stop offset="100%" stop-color="#38434b"/>
+                  </linearGradient>
+                  <linearGradient id="ahuCasingInner" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#242e36"/>
+                    <stop offset="8%" stop-color="#3e4a54"/>
+                    <stop offset="50%" stop-color="#edf1f3"/>
+                    <stop offset="92%" stop-color="#3e4a54"/>
+                    <stop offset="100%" stop-color="#242e36"/>
+                  </linearGradient>
+                  <linearGradient id="ahuSkidRail" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#64737d"/>
+                    <stop offset="25%" stop-color="#3b464f"/>
+                    <stop offset="75%" stop-color="#232b31"/>
+                    <stop offset="100%" stop-color="#14191d"/>
+                  </linearGradient>
+                  <linearGradient id="ahuFlangeGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#48545e"/>
+                    <stop offset="30%" stop-color="#b0bcc5"/>
+                    <stop offset="70%" stop-color="#e2e8ec"/>
+                    <stop offset="100%" stop-color="#3f4a53"/>
+                  </linearGradient>
+                  <linearGradient id="ahuDuctWallGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#7a8994"/>
+                    <stop offset="35%" stop-color="#c4cbd1"/>
+                    <stop offset="65%" stop-color="#94a2ac"/>
+                    <stop offset="100%" stop-color="#56636d"/>
+                  </linearGradient>
+                  <linearGradient id="ahuDrainPanGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#475569"/>
+                    <stop offset="40%" stop-color="#64748b"/>
+                    <stop offset="100%" stop-color="#334155"/>
+                  </linearGradient>
+                  <linearGradient id="ahuGlassGrad" cx="35%" cy="35%" r="65%">
+                    <stop offset="0%" stop-color="#e0f2fe"/>
+                    <stop offset="50%" stop-color="#38bdf8"/>
+                    <stop offset="100%" stop-color="#0369a1"/>
+                  </linearGradient>
+
+                  <clipPath id="ahuAirDuctClip" clipPathUnits="userSpaceOnUse">
+                    <rect x="18" y="86" width="127" height="52"/>
+                    <rect x="18" y="232" width="127" height="52"/>
+                    <path d="M145 86 H257 V267 H205 L145 284 V232 L185 232 V138 L145 138 Z"/>
+                    <rect x="145" y="138" width="40" height="94"/>
+                    <rect x="257" y="86" width="805" height="181"/>
+                    <path d="M1062 86 H1150 V267 H1062 Z"/>
+                  </clipPath>
+                  <filter id="ahuShadow2" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter>
+                  <marker id="ahuAirArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#1876b8"/></marker>
+                  <marker id="ahuWaterArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#2799d4"/></marker>
+                </defs>
+
+                <text x="38" y="43" class="ahu-title">AHU / AIR-SIDE PROCESS ENCLOSED CASING</text>
+
+                <!-- ============================================================
+                     1. CONTINUOUS HEAVY STRUCTURAL SKID BASE & ISOLATION MOUNTS
+                     ============================================================ -->
+                <g id="ahuSkidAssembly">
+                  <!-- Bottom skid base channel beam running continuously under entire unit -->
+                  <rect x="18" y="267" width="1132" height="14" rx="2" fill="url(#ahuSkidRail)" stroke="#1e272d" stroke-width="1.5" filter="url(#ahuShadow2)"/>
+                  <line x1="20" y1="270" x2="1148" y2="270" stroke="#71828f" stroke-width="1.2" opacity="0.6"/>
+                  <!-- Heavy-duty rubber / steel spring vibration mounts -->
+                  <g fill="#2d3748" stroke="#1a202c" stroke-width="1">
+                    <rect x="40" y="281" width="30" height="10" rx="1"/>
+                    <rect x="180" y="281" width="30" height="10" rx="1"/>
+                    <rect x="310" y="281" width="30" height="10" rx="1"/>
+                    <rect x="480" y="281" width="30" height="10" rx="1"/>
+                    <rect x="680" y="281" width="30" height="10" rx="1"/>
+                    <rect x="880" y="281" width="30" height="10" rx="1"/>
+                    <rect x="1060" y="281" width="30" height="10" rx="1"/>
+                  </g>
+                </g>
+
+                <!-- ============================================================
+                     2. CONTINUOUS ENCLOSED DUCT & AHU CASING ENVELOPE
+                     ============================================================ -->
+                <g id="ahuContinuousCasing">
+                  <!-- Unified interior duct chamber backdrop -->
+                  <!-- Outdoor duct interior (y=86 to 138, x=18 to 145) -->
+                  <rect x="18" y="86" width="127" height="52" fill="url(#ahuCasingInner)"/>
+                  <!-- Return duct interior (y=232 to 284, x=18 to 145) -->
+                  <rect x="18" y="232" width="127" height="52" fill="url(#ahuCasingInner)"/>
+                  <!-- Mixing plenum interior transition (x=145 to 257) -->
+                  <path d="M145 86 H257 V267 H205 L145 284 V232 L185 232 V138 L145 138 Z" fill="url(#ahuCasingInner)"/>
+                  <!-- Main AHU continuous cabinet interior (x=257 to 1062, y=86 to 267) -->
+                  <rect x="257" y="86" width="805" height="181" fill="url(#ahuCasingInner)"/>
+                  <!-- Supply duct outlet interior (x=1062 to 1150, y=86 to 267) -->
+                  <path d="M1062 86 H1150 V267 H1062 Z" fill="url(#ahuCasingInner)"/>
+
+                  <!-- TOP CONTINUOUS DOUBLE-WALL CASING HEADER (y=78 to 86) -->
+                  <rect x="18" y="78" width="1132" height="9" fill="url(#ahuCasingOuter)" stroke="#38434b" stroke-width="1.5" filter="url(#ahuShadow2)"/>
+                  <line x1="20" y1="81" x2="1148" y2="81" stroke="#e2e8ec" stroke-width="1" opacity="0.6"/>
+
+                  <!-- BOTTOM CONTINUOUS CASING FOOT / SILL (y=263 to 268) -->
+                  <rect x="257" y="263" width="805" height="5" fill="url(#ahuCasingOuter)" stroke="#38434b" stroke-width="1"/>
+
+                  <!-- OUTDOOR AIR INLET DUCT WALLS (Top branch, x=18 to 145) -->
+                  <rect x="18" y="138" width="127" height="6" fill="url(#ahuDuctWallGrad)" stroke="#45525c" stroke-width="1"/>
+                  <!-- Weather Louver blades at Outdoor Inlet entrance (x=18) -->
+                  <g stroke="#374151" stroke-width="2" stroke-linecap="round">
+                    <line x1="18" y1="90" x2="28" y2="98"/>
+                    <line x1="18" y1="102" x2="28" y2="110"/>
+                    <line x1="18" y1="114" x2="28" y2="122"/>
+                    <line x1="18" y1="126" x2="28" y2="134"/>
+                  </g>
+                  <!-- Inlet flange collar (x=18) -->
+                  <rect x="14" y="82" width="6" height="60" rx="1" fill="url(#ahuFlangeGrad)" stroke="#2d3748"/>
+
+                  <!-- RETURN AIR INLET DUCT WALLS (Bottom branch, x=18 to 145) -->
+                  <rect x="18" y="226" width="127" height="6" fill="url(#ahuDuctWallGrad)" stroke="#45525c" stroke-width="1"/>
+                  <rect x="18" y="284" width="127" height="6" fill="url(#ahuDuctWallGrad)" stroke="#45525c" stroke-width="1"/>
+                  <!-- Weather Louver / Grille at Return Inlet entrance (x=18) -->
+                  <g stroke="#374151" stroke-width="2" stroke-linecap="round">
+                    <line x1="18" y1="236" x2="28" y2="244"/>
+                    <line x1="18" y1="248" x2="28" y2="256"/>
+                    <line x1="18" y1="260" x2="28" y2="268"/>
+                    <line x1="18" y1="272" x2="28" y2="280"/>
+                  </g>
+                  <!-- Return Inlet flange collar (x=18) -->
+                  <rect x="14" y="228" width="6" height="60" rx="1" fill="url(#ahuFlangeGrad)" stroke="#2d3748"/>
+
+                  <!-- SUPPLY AIR DISCHARGE OUTLET DUCT HOOD & FLANGE (X=1062 to 1150) -->
+                  <rect x="1150" y="80" width="8" height="190" rx="1" fill="url(#ahuFlangeGrad)" stroke="#2d3748"/>
+                </g>
+
+                <!-- ============================================================
+                     3. MODULAR SECTION JOINING FLANGES & INTERNAL MOUNTING RACKS
+                     ============================================================ -->
+                <g id="ahuSectionFlanges">
+                  <!-- Vertical double-flange section joint mullions with bolt rivets -->
+                  <rect x="142" y="82" width="6" height="206" fill="url(#ahuFlangeGrad)" stroke="#374151" stroke-width="0.8"/>
+                  <rect x="254" y="80" width="6" height="190" fill="url(#ahuFlangeGrad)" stroke="#374151" stroke-width="0.8"/>
+                  <rect x="347" y="80" width="6" height="190" fill="url(#ahuFlangeGrad)" stroke="#374151" stroke-width="0.8"/>
+                  <rect x="497" y="80" width="6" height="190" fill="url(#ahuFlangeGrad)" stroke="#374151" stroke-width="0.8"/>
+                  <rect x="647" y="80" width="6" height="190" fill="url(#ahuFlangeGrad)" stroke="#374151" stroke-width="0.8"/>
+                  <rect x="887" y="80" width="6" height="190" fill="url(#ahuFlangeGrad)" stroke="#374151" stroke-width="0.8"/>
+                  <rect x="977" y="80" width="6" height="190" fill="url(#ahuFlangeGrad)" stroke="#374151" stroke-width="0.8"/>
+
+                  <!-- Bolt Head Rivets on Flanges -->
+                  <g fill="#475569" stroke="#1e293b" stroke-width="0.5">
+                    <circle cx="257" cy="90" r="1.5"/><circle cx="257" cy="178" r="1.5"/><circle cx="257" cy="260" r="1.5"/>
+                    <circle cx="350" cy="90" r="1.5"/><circle cx="350" cy="178" r="1.5"/><circle cx="350" cy="260" r="1.5"/>
+                    <circle cx="500" cy="90" r="1.5"/><circle cx="500" cy="178" r="1.5"/><circle cx="500" cy="260" r="1.5"/>
+                    <circle cx="650" cy="90" r="1.5"/><circle cx="650" cy="178" r="1.5"/><circle cx="650" cy="260" r="1.5"/>
+                    <circle cx="890" cy="90" r="1.5"/><circle cx="890" cy="178" r="1.5"/><circle cx="890" cy="260" r="1.5"/>
+                    <circle cx="980" cy="90" r="1.5"/><circle cx="980" cy="178" r="1.5"/><circle cx="980" cy="260" r="1.5"/>
+                  </g>
+                </g>
+
+                <!-- ============================================================
+                     4. INTERNAL COMPONENT MOUNTING TRACKS & BAFFLE WALLS
+                     ============================================================ -->
+                <g id="ahuInternalBaffles">
+                  <!-- Pre-Filter Mounting Rack Tracks (top and bottom) -->
+                  <rect x="266" y="88" width="74" height="14" fill="#475569" rx="1"/>
+                  <rect x="266" y="253" width="74" height="13" fill="#475569" rx="1"/>
+                  <line x1="266" y1="102" x2="340" y2="102" stroke="#64748b" stroke-width="2"/>
+                  <line x1="266" y1="253" x2="340" y2="253" stroke="#64748b" stroke-width="2"/>
+
+                  <!-- Cooling Coil Condensate Drain Pan (under cooling coil, x=355 to 495) -->
+                  <path d="M355 256 H495 V266 H355 Z" fill="url(#ahuDrainPanGrad)" stroke="#1e293b" stroke-width="1"/>
+                  <path d="M485 266 V273 H490" fill="none" stroke="#64748b" stroke-width="2" stroke-linejoin="round"/>
+
+                  <!-- Fan Section Internal Bulkhead Partition Wall & Inlet Bell-Mouth Cone -->
+                  <rect x="657" y="86" width="6" height="181" fill="#475569" stroke="#334155" stroke-width="0.8"/>
+                  <path d="M646 114 C664 134 664 222 646 242 L662 242 C674 222 674 134 662 114 Z" fill="#64748b" stroke="#1e293b" stroke-width="1"/>
+
+                  <!-- Fan Mounting Base Skid Plate -->
+                  <rect x="675" y="258" width="190" height="9" rx="1" fill="#334155" stroke="#1e293b" stroke-width="0.8"/>
+
+                  <!-- Supply Filter Mounting Rack Tracks (top and bottom) -->
+                  <rect x="896" y="88" width="74" height="14" fill="#475569" rx="1"/>
+                  <rect x="896" y="253" width="74" height="13" fill="#475569" rx="1"/>
+                  <line x1="896" y1="102" x2="970" y2="102" stroke="#64748b" stroke-width="2"/>
+                  <line x1="896" y1="253" x2="970" y2="253" stroke="#64748b" stroke-width="2"/>
+                </g>
+
+                <!-- ============================================================
+                     5. AHU CASING ACCESS DOORS & BMS TAG PLATES
+                     ============================================================ -->
+                <g id="ahuCasingDetails">
+                  <!-- Access Door Latches & Headers on Filter, Coil, and Fan modules -->
+                  <rect x="268" y="87" width="70" height="4" fill="#94a3b8"/>
+                  <rect x="360" y="87" width="278" height="4" fill="#94a3b8"/>
+                  <rect x="660" y="87" width="220" height="4" fill="#94a3b8"/>
+                  <!-- Inspection Sight Glass Window on Fan Door -->
+                  <circle cx="770" cy="98" r="7" fill="url(#ahuGlassGrad)" stroke="#334155" stroke-width="1.2"/>
+                  <circle cx="770" cy="98" r="5" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.6"/>
+
+                  <!-- BMS Equipment Identification Tag Plates -->
+                  <g font-family="var(--font-mono)" font-size="7" font-weight="900" fill="#334155" text-anchor="middle">
+                    <rect x="207" y="80" width="46" height="9" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="0.8"/>
+                    <text x="230" y="87">MIX</text>
+                    <rect x="278" y="80" width="50" height="9" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="0.8"/>
+                    <text x="303" y="87">FILTER</text>
+                    <rect x="390" y="80" width="70" height="9" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="0.8"/>
+                    <text x="425" y="87">CHW COIL</text>
+                    <rect x="540" y="80" width="70" height="9" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="0.8"/>
+                    <text x="575" y="87">HW COIL</text>
+                    <rect x="735" y="80" width="70" height="9" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="0.8"/>
+                    <text x="770" y="87">SUPPLY FAN</text>
+                    <rect x="898" y="80" width="70" height="9" rx="1" fill="#cbd5e1" stroke="#64748b" stroke-width="0.8"/>
+                    <text x="933" y="87">SUP FILTER</text>
+                  </g>
+                </g>
+
+                <!-- Stage workflow alignment line & labels -->
+                <path d="M250 318 H1130" class="ahu-stage-line"/>
+                <g class="ahu-stage-labels">
+                  <text x="270" y="334" class="ahu-stage">MIX</text>
+                  <text x="335" y="334" class="ahu-stage">FILTER</text>
+                  <text x="425" y="334" class="ahu-stage">COIL</text>
+                  <text x="575" y="334" class="ahu-stage">HEAT</text>
+                  <text x="770" y="334" class="ahu-stage">FAN</text>
+                  <text x="933" y="334" class="ahu-stage">SUPPLY FILTER</text>
+                  <text x="1030" y="334" class="ahu-stage">DAMPER</text>
+                  <text x="1120" y="334" class="ahu-stage">SUPPLY</text>
+                </g>
+
+                <!-- Outdoor and return-air labels & dampers -->
+                <text x="34" y="74" class="ahu-label">OUTDOOR AIR</text>
+                <text x="34" y="304" class="ahu-label">RETURN AIR</text>
+
+                <!-- VAV Outdoor Damper frame -->
+                <rect class="ahu-damper-frame" x="118" y="86" width="72" height="52" rx="2"/>
+                <g id="ahuVavOutdoor" class="ahu-damper-group">
+                  <line x1="128" y1="88" x2="128" y2="136"/><line x1="148" y1="88" x2="148" y2="136"/><line x1="168" y1="88" x2="168" y2="136"/>
+                </g>
+                <!-- VAV Return Damper frame -->
+                <rect class="ahu-damper-frame" x="118" y="232" width="72" height="52" rx="2"/>
+                <g id="ahuVavReturn" class="ahu-damper-group">
+                  <line x1="128" y1="234" x2="128" y2="282"/><line x1="148" y1="234" x2="148" y2="282"/><line x1="168" y1="234" x2="168" y2="282"/>
+                </g>
+                <text x="102" y="74" class="ahu-small">VAV OUTDOOR</text>
+                <text x="102" y="304" class="ahu-small">VAV RETURN</text>
+
+                <!-- Mixing section marks -->
+                <g id="ahuMixingSection">
+                  <rect x="205" y="94" width="52" height="168" rx="5" fill="#dfe5e8" fill-opacity="0.4" stroke="#69767e" stroke-width="1.5"/>
+                  <path d="M218 115 L244 140 M218 140 L244 165 M218 165 L244 190 M218 190 L244 215 M218 215 L244 240" class="ahu-mixing-mark"/>
+                  <text x="215" y="279" class="ahu-label">MIX</text>
+                  <text x="207" y="293" class="ahu-small">AIR BLEND</text>
+                </g>
+
+                <!-- Filter -->
+                <g class="ahu-filter-stage">
+                  <rect x="270" y="104" width="66" height="149" rx="4" fill="#e6ebee" stroke="#56646d" stroke-width="2"/>
+                  <path d="M279 113 L327 134 L279 155 L327 176 L279 197 L327 218 L279 239" fill="none" stroke="#7b878f" stroke-width="3"/>
+                  <path d="M287 111 V246 M299 111 V246 M311 111 V246 M323 111 V246" stroke="#aab4ba" stroke-width="1.5" opacity=".65"/>
+                  <circle id="ahuFilterLed" cx="303" cy="91" r="6" fill="#27ae60"/>
+                  <text x="281" y="279" class="ahu-label">FILTER</text>
+                  <text x="273" y="293" class="ahu-small">AIR CLEANING</text>
+                </g>
+
+                <!-- Clean cooling coil: fins + serpentine chilled-water circuit -->
+                <g id="ahuCoolingCoil" class="ahu-coil-stage">
+                  <g transform="translate(148.75 0) scale(0.65 1)">
+                    <rect x="360" y="99" width="130" height="159" rx="5" fill="url(#ahuCoilFace)" stroke="#68777e" stroke-width="2"/>
+                    <rect x="369" y="108" width="112" height="141" rx="3" fill="#e3e9ec" opacity=".9"/>
+                    <g class="ahu-coil-fins">
+                      <path d="M374 111 V246 M383 111 V246 M392 111 V246 M401 111 V246 M410 111 V246 M419 111 V246 M428 111 V246 M437 111 V246 M446 111 V246 M455 111 V246 M464 111 V246 M473 111 V246" fill="none" stroke="#7d8990" stroke-width="1.8"/>
+                      <path d="M372 150 H478 M372 198 H478 M372 246 H478" fill="none" stroke="#aab4ba" stroke-width="1.2" opacity=".75"/>
+                    </g>
+                    <path id="ahuCoilGlow" d="M378 116 H470 C482 116 482 128 470 128 H378 C366 128 366 140 378 140 H470 C482 140 482 152 470 152 H378 C366 152 366 164 378 164 H470 C482 164 482 176 470 176 H378 C366 176 366 188 378 188 H470 C482 188 482 200 470 200 H378 C366 200 366 212 378 212 H470 C482 212 482 224 470 224 H378 C366 224 366 236 378 236 H470" class="ahu-coil-glow"/>
+                    <path d="M378 116 H470 C482 116 482 128 470 128 H378 C366 128 366 140 378 140 H470 C482 140 482 152 470 152 H378 C366 152 366 164 378 164 H470 C482 164 482 176 470 176 H378 C366 176 366 188 378 188 H470 C482 188 482 200 470 200 H378 C366 200 366 212 378 212 H470 C482 212 482 224 470 224 H378 C366 224 366 236 378 236 H470" class="ahu-coil-tube"/>
+                    <path d="M378 116 V236 M470 116 V236" class="ahu-coil-header"/>
+                  </g>
+                  <text x="377" y="279" class="ahu-label">COOLING COIL</text>
+                  <text x="377" y="293" class="ahu-small">CHW COIL BANK</text>
+                </g>
+
+                <!-- Heating coil, downstream of cooling and upstream of the fan -->
+                <g id="ahuHeatingCoil" class="ahu-heating-coil">
+                  <g transform="translate(201.25 0) scale(0.65 1)">
+                    <rect x="510" y="99" width="130" height="159" rx="5" fill="url(#ahuHeatCoilFace)" stroke="#a64d31" stroke-width="2"/>
+                    <rect x="519" y="108" width="112" height="141" rx="3" fill="#fff2e9" opacity=".84"/>
+                    <rect id="ahuHeatingCoilGlow" x="517" y="106" width="116" height="145" rx="3" fill="#ff8750" opacity="0"/>
+                    <g class="ahu-heating-fins">
+                      <path d="M524 111 V246 M533 111 V246 M542 111 V246 M551 111 V246 M560 111 V246 M569 111 V246 M578 111 V246 M587 111 V246 M596 111 V246 M605 111 V246 M614 111 V246 M623 111 V246"/>
+                      <path d="M522 126 H628 M522 150 H628 M522 174 H628 M522 198 H628 M522 222 H628 M522 246 H628"/>
+                    </g>
+                    <path d="M528 116 H620 C628 116 628 128 620 128 H528 C520 128 520 140 528 140 H620 C628 140 628 152 620 152 H528 C520 152 520 164 528 164 H620 C628 164 628 176 620 176 H528 C520 176 520 188 528 188 H620 C628 188 628 200 620 200 H528 C520 200 520 212 528 212 H620 C628 212 628 224 620 224 H528 C520 224 520 236 528 236 H620" class="ahu-heating-tube"/>
+                    <path d="M528 116 V236 M620 116 V236" class="ahu-heating-header"/>
+                  </g>
+                  <text x="527" y="279" class="ahu-label">HEATING COIL</text>
+                  <text x="527" y="293" class="ahu-small">HOT-WATER / DX SERVICE</text>
+                </g>
+
+                <!-- Cooling-water circuit and valve -->
+                <path d="M345 82 H470 V116" class="ahu-water-pipe" marker-end="url(#ahuWaterArrow)"/>
+                <path d="M470 258 V350 H345" class="ahu-water-pipe" marker-end="url(#ahuWaterArrow)"/>
+                <text x="345" y="72" class="ahu-small">CHW SUPPLY</text>
+                <text x="345" y="366" class="ahu-small">CHW RETURN</text>
+                <text x="425" y="40" class="ahu-small" text-anchor="middle">COOLING VALVE</text>
+                <text id="ahuValveCmd2" x="425" y="57" class="ahu-digital" text-anchor="middle">60 %</text>
+                <g id="ahuCoolingValve" class="ahu-control-valve">
+                  <rect x="420" y="62" width="10" height="8" rx="2" class="ahu-valve-actuator"/>
+                  <line id="ahuValveStem" x1="425" y1="70" x2="425" y2="81" class="ahu-valve-stem"/>
+                  <rect x="416" y="77" width="18" height="10" rx="2" class="ahu-valve-body"/>
+                  <circle cx="425" cy="82" r="2" class="ahu-valve-detail"/>
+                </g>
+                <g id="ahuWaterFlow" class="water-flow">
+                  <circle cx="355" cy="82" r="3.5"/><circle cx="377" cy="82" r="3.5"/><circle cx="440" cy="82" r="3.5"/><circle cx="461" cy="82" r="3.5"/>
+                </g>
+
+                <!-- Supply fan -->
+                <rect x="660" y="91" width="220" height="175" rx="8" fill="url(#ahuShell)" stroke="#56646d" stroke-width="2"/>
+                <g transform="translate(770 178) scale(1.18)" class="ahu-fan-center">
+                  <circle r="52" fill="#d2d8dc" stroke="#5a6065" stroke-width="2"/>
+                  <circle r="46" fill="none" stroke="#98a0a8" stroke-width="1" stroke-dasharray="4,2"/>
+                  <g id="ahuFanRotor" class="fan-rotor ahu-fan-rotor">
+                    <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(0)" fill="url(#ahuCondFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                    <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(60)" fill="url(#ahuCondFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                    <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(120)" fill="url(#ahuCondFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                    <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(180)" fill="url(#ahuCondFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                    <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(240)" fill="url(#ahuCondFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                    <path d="M 0,-8 C -9,-15 -18,-26 -7,-38 C 5,-40 15,-30 8,-18 C 5,-13 3,-9 0,-8 Z" transform="rotate(300)" fill="url(#ahuCondFanGrad)" stroke="#1e293b" stroke-width="0.8"/>
+                  </g>
+                  <circle r="13" fill="url(#ahuChromeHubGrad)" stroke="#475569" stroke-width="1.5"/>
+                  <circle r="4.5" fill="#1e293b"/>
+                </g>
+                <text x="738" y="279" class="ahu-label">SUPPLY FAN</text>
+                <text x="715" y="293" class="ahu-small">ON / OFF + VFD SPEED</text>
+
+                <!-- Supply filter, duct, damper and directional arrows -->
+                <g class="ahu-filter-stage">
+                  <rect x="900" y="104" width="66" height="149" rx="4" fill="#e6ebee" stroke="#56646d" stroke-width="2"/>
+                  <path d="M909 113 L957 134 L909 155 L957 176 L909 197 L957 218 L909 239" fill="none" stroke="#7b878f" stroke-width="3"/>
+                  <path d="M917 111 V246 M929 111 V246 M941 111 V246 M953 111 V246" stroke="#aab4ba" stroke-width="1.5" opacity=".65"/>
+                  <text x="900" y="279" class="ahu-label">SUPPLY FILTER</text>
+                  <text x="902" y="293" class="ahu-small">AIR CLEANING</text>
+                  <text id="ahuSupplyFilter" x="933" y="307" class="ahu-small" text-anchor="middle">NORMAL</text>
+                </g>
+                <!-- Supply Damper frame -->
+                <rect class="ahu-damper-frame" x="983" y="86" width="76" height="181" rx="2"/>
+                <!-- Supply Damper blades — full duct height, 5 blades across the opening -->
+                <g id="ahuDamper" class="ahu-damper-group">
+                  <line x1="992" y1="86" x2="992" y2="267"/>
+                  <line x1="1007" y1="86" x2="1007" y2="267"/>
+                  <line x1="1022" y1="86" x2="1022" y2="267"/>
+                  <line x1="1037" y1="86" x2="1037" y2="267"/>
+                  <line x1="1052" y1="86" x2="1052" y2="267"/>
+                </g>
+                <text x="975" y="74" class="ahu-small">SUPPLY DAMPER 0–100%</text>
+                <path d="M235 178 H265 M338 178 H355 M493 178 H510 M640 178 H660 M645 171 H660 M645 185 H660 M880 178 H900 M900 178 H966 M966 178 H1000 M1000 178 H1062 M1062 178 H1135" class="ahu-flow-arrow" marker-end="url(#ahuAirArrow)"/>
+                <g id="ahuAirflowDots" class="airflow-streams" clip-path="url(#ahuAirDuctClip)"></g>
+                <text x="1070" y="158" class="ahu-label">SUPPLY AIR</text>
+
+                <!-- VFD -->
+                <g class="vfd-block" filter="url(#ahuShadow2)">
+                  <path d="M500 375 l20 -12 h116 l20 12 v44 h-156z" fill="#10151a" stroke="#4f5c64"/>
+                  <path d="M500 375 l20 -12 v42 l-20 14z" fill="#2b343b"/>
+                  <rect x="520" y="369" width="116" height="31" rx="3" fill="url(#ahuVfdFace)" stroke="#69757c"/>
+                  <text x="532" y="390" class="vfd-text">VFD</text><text id="ahuVfdHz2" x="570" y="390" class="vfd-text">40.0 Hz</text>
+                </g>
+
+                <!-- Local controls stay aligned with their equipment stations. -->
+                <foreignObject x="60" y="350" width="190" height="78" aria-label="VAV damper control">
+                  <div xmlns="http://www.w3.org/1999/xhtml" class="inline-ctrl-card inline-ctrl-vav">
+                    <div class="inline-ctrl-title">VAV DAMPER</div>
+                    <div class="inline-ctrl-readout"><span>Position</span><strong id="inlineVavPct">70 %</strong></div>
+                    <input id="inlineVavSlider" class="actuator-slider vav" type="range" min="0" max="100" value="70" step="1" aria-label="VAV damper position">
+                  </div>
+                </foreignObject>
+
+                <foreignObject x="350" y="382" width="150" height="78" aria-label="Cooling valve control">
+                  <div xmlns="http://www.w3.org/1999/xhtml" class="inline-ctrl-card inline-ctrl-valve">
+                    <div class="inline-ctrl-title">COOLING VALVE</div>
+                    <div class="inline-ctrl-readout"><span>Command</span><strong id="inlineValvePct">60 %</strong></div>
+                    <input id="inlineValveSlider" class="actuator-slider valve" type="range" min="0" max="100" value="60" step="1" aria-label="Cooling valve command">
+                  </div>
+                </foreignObject>
+
+                <foreignObject x="510" y="437" width="140" height="78" aria-label="Heating valve control">
+                  <div xmlns="http://www.w3.org/1999/xhtml" class="inline-ctrl-card inline-ctrl-heating">
+                    <div class="inline-ctrl-title">HEATING VALVE</div>
+                    <div class="inline-ctrl-readout"><span>Command</span><strong id="inlineHeatingValvePct">40 %</strong></div>
+                    <input id="inlineHeatingValveSlider" class="actuator-slider heating" type="range" min="0" max="100" value="40" step="1" aria-label="Heating valve command">
+                  </div>
+                </foreignObject>
+
+                <foreignObject x="663" y="350" width="214" height="128" aria-label="Supply fan controls">
+                  <div xmlns="http://www.w3.org/1999/xhtml" class="inline-ctrl-card inline-ctrl-fan">
+                    <div class="inline-ctrl-title">SUPPLY FAN</div>
+                    <div class="inline-ctrl-readout"><span>Fan Power</span><strong id="inlineFanStatus" class="actuator-readout off">OFF</strong></div>
+                    <label class="toggle-switch"><input id="inlineFanToggle" type="checkbox" aria-label="Supply fan on or off"><span class="toggle-track"></span><span class="toggle-text">ON / OFF</span></label>
+                    <div class="inline-ctrl-divider"></div>
+                    <div class="inline-ctrl-readout"><span>VFD Frequency</span><strong id="inlineVfdHz">40.0 Hz</strong></div>
+                    <input id="inlineVfdSlider" class="actuator-slider vfd" type="range" min="0" max="60" value="40" step="0.5" aria-label="VFD frequency">
+                  </div>
+                </foreignObject>
+
+                <foreignObject x="941" y="350" width="180" height="78" aria-label="Supply damper control">
+                  <div xmlns="http://www.w3.org/1999/xhtml" class="inline-ctrl-card inline-ctrl-damper">
+                    <div class="inline-ctrl-title">SUPPLY DAMPER</div>
+                    <div class="inline-ctrl-readout"><span>Position</span><strong id="inlineDamperPct">70 %</strong></div>
+                    <input id="inlineDamperSlider" class="actuator-slider" type="range" min="0" max="100" value="70" step="1" aria-label="Supply damper position">
+                  </div>
+                </foreignObject>
+
+                <foreignObject x="1020" y="437" width="160" height="96" aria-label="Supply air temperature setpoint">
+                  <div xmlns="http://www.w3.org/1999/xhtml" class="inline-ctrl-card inline-ctrl-temp">
+                    <div class="inline-ctrl-title">SUPPLY AIR / SETPOINT</div>
+                    <div class="inline-ctrl-readout"><span>Supply Air</span><strong id="ahuSupplyTemp2">24.0 Â°C</strong></div>
+                    <div class="inline-ctrl-readout"><span>Setpoint</span><strong id="inlineSetTemp">22.0 Â°C</strong></div>
+                    <input id="inlineSetTempSlider" class="actuator-slider temp" type="range" min="16" max="28" value="22" step="0.5" aria-label="Supply air temperature setpoint">
+                  </div>
+                </foreignObject>
+
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------- CONTROL STRIP ---------------- -->
+    <section class="panel">
+      <div class="panel-header"><span>Simulation Mode & Controls</span></div>
+      <div class="panel-body">
+        
+        <!-- Mode Switcher Tabs -->
+        <div class="mode-switcher">
+          <button type="button" id="tabLiveMode" class="mode-tab active live">
+            <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2ecc71;"></span>
+            LIVE SIMULATION
+          </button>
+          <button type="button" id="tabHistMode" class="mode-tab">
+            <span>â±</span>
+            TIME / HISTORICAL PLAYBACK
+          </button>
+        </div>
+
+        <!-- 1. LIVE MODE CONTROLS -->
+        <div id="liveControlsSection" class="mode-section">
+          <div class="control-strip">
+            <div class="control-group">
+              <span class="control-label">Live System Command</span>
+              <div class="control-row">
+                <button id="btnStart" class="btn-start">Start</button>
+                <button id="btnStop" class="btn-stop">Stop</button>
+                <button id="btnSaveSnapshot" type="button" style="padding: 8px 12px; font-size: 11px;">ðŸ’¾ Log Now</button>
+              </div>
+            </div>
+            <div class="control-group" style="margin-left: auto;">
+              <span class="control-label">PostgreSQL Database (AC Simulatiom)</span>
+              <div class="control-row">
+                <span id="dbSaveStatus" class="db-status-badge">â— Auto-saving to PostgreSQL every 5s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. TIME / HISTORICAL REPLAY CONTROLS (initially hidden) -->
+        <div id="histControlsSection" class="mode-section" style="display: none;">
+          
+          <!-- Query / Range selection row -->
+          <div class="hist-query-row">
+            <div class="hist-field">
+              <label for="histStartTime">Start Time</label>
+              <input type="datetime-local" id="histStartTime" class="hist-input" step="1">
+            </div>
+
+            <div class="hist-field">
+              <label for="histDuration">Duration / Range</label>
+              <select id="histDuration" class="hist-select">
+                <option value="5m" selected>Last 5 Minutes</option>
+                <option value="15m">Last 15 Minutes</option>
+                <option value="30m">Last 30 Minutes</option>
+                <option value="1h">Last 1 Hour</option>
+                <option value="all">All Available Records</option>
+                <option value="custom">Custom End Time</option>
+              </select>
+            </div>
+
+            <div class="hist-field" id="histEndTimeWrap" style="display: none;">
+              <label for="histEndTime">End Time</label>
+              <input type="datetime-local" id="histEndTime" class="hist-input" step="1">
+            </div>
+
+            <div class="hist-field" style="justify-content: flex-end;">
+              <button type="button" id="btnFetchHistory" class="btn-hist-load">ðŸ“¥ Load Records</button>
+            </div>
+
+            <div class="hist-field" style="margin-left: auto; align-items: flex-end;">
+              <div style="display: flex; gap: 4px;">
+                <button type="button" id="btnQuickAll" class="btn-preset" title="Replay Full Dataset">All Records</button>
+                <button type="button" id="btnQuick5m" class="btn-preset">Last 5m</button>
+                <button type="button" id="btnQuick15m" class="btn-preset">Last 15m</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Timeline Scrubber & Playback bar -->
+          <div class="hist-player-row">
+            
+            <div class="hist-scrubber-wrap">
+              <span style="font-size: 11px; font-weight: bold; color: var(--c-text-dim);">TIMELINE</span>
+              <input type="range" id="histScrubber" class="hist-slider" min="0" max="100" value="0" disabled>
+              <span id="histCurrentTime" class="hist-time-badge">--:--:--</span>
+            </div>
+
+            <div class="hist-controls-bar">
+              <div class="hist-btn-group">
+                <button type="button" id="btnHistPrev" class="btn-hist-step" title="Previous Frame" disabled>â® Step</button>
+                <button type="button" id="btnHistPlay" class="btn-hist-play" disabled>â–¶ Play</button>
+                <button type="button" id="btnHistNext" class="btn-hist-step" title="Next Frame" disabled>â­ Step</button>
+                <button type="button" id="btnHistStop" class="btn-hist-step" title="Reset to Start" disabled>â¹ Reset</button>
+              </div>
+
+              <div style="display:flex; align-items:center; gap:12px;">
+                <label style="display:flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--c-text-dim); cursor:pointer;">
+                  <input type="checkbox" id="chkHistLoop" checked style="cursor:pointer;"> ðŸ” Loop
+                </label>
+
+                <div class="hist-speed-wrap">
+                  <span>SPEED:</span>
+                  <select id="histSpeedSelect" class="hist-select" style="padding: 4px 6px;">
+                    <option value="0.5">0.5x</option>
+                    <option value="1.0" selected>1.0x</option>
+                    <option value="2.0">2.0x</option>
+                    <option value="5.0">5.0x</option>
+                    <option value="10.0">10.0x</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="histStatusMsg" class="hist-info-msg">Loading records from PostgreSQL...</div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+  </div>
+
+  <!-- ---------------- RIGHT COLUMN ---------------- -->
+  <div class="side-column">
+
+    <section class="panel">
+      <div class="panel-header"><span>System Status</span></div>
+      <div class="panel-body status-grid">
+        <div class="status-item">
+          <span class="status-label">System Status</span>
+          <span class="status-value"><span class="status-lamp" id="lampSystemStatus"></span><span id="valSystemStatus">STOPPED</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Compressor</span>
+          <span class="status-value"><span class="status-lamp" id="lampCompressor"></span><span id="valCompressor">OFF</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Condenser</span>
+          <span class="status-value"><span class="status-lamp" id="lampCondenser"></span><span id="valCondenser">IDLE</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Evaporator</span>
+          <span class="status-value"><span class="status-lamp" id="lampEvaporator"></span><span id="valEvaporator">IDLE</span></span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">Capillary Tube</span>
+          <span class="status-value"><span class="status-lamp" id="lampCapillary"></span><span id="valCapillary">IDLE</span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header"><span>Live Parameters</span></div>
+      <div class="panel-body params-grid">
+        <!-- 1. Compressor -->
+        <div class="param-box">
+          <div class="param-label">Compressor Suction P</div>
+          <div class="param-value" id="pvSuctionP">1.0 bar</div>
+        </div>
+        <div class="param-box warm">
+          <div class="param-label">Compressor Discharge P</div>
+          <div class="param-value" id="pvDischargeP">1.0 bar</div>
+        </div>
+
+        <!-- 2. Condenser -->
+        <div class="param-box warm">
+          <div class="param-label">Condenser Inlet Temp.</div>
+          <div class="param-value" id="pvCondInTemp">24.0 Â°C</div>
+        </div>
+        <div class="param-box blue">
+          <div class="param-label">Condenser Outlet Temp.</div>
+          <div class="param-value" id="pvCondOutTemp">24.0 Â°C</div>
+        </div>
+
+        <!-- 3. Expansion Valve (Capillary Tube) -->
+        <div class="param-box blue">
+          <div class="param-label">Expansion Valve Inlet T</div>
+          <div class="param-value" id="pvExpInTemp">24.0 Â°C</div>
+        </div>
+        <div class="param-box blue">
+          <div class="param-label">Expansion Valve Outlet T</div>
+          <div class="param-value" id="pvExpOutTemp">24.0 Â°C</div>
+        </div>
+
+        <!-- 4. Evaporator -->
+        <div class="param-box blue">
+          <div class="param-label">Evaporator Inlet Temp.</div>
+          <div class="param-value" id="pvEvapInTemp">24.0 Â°C</div>
+        </div>
+        <div class="param-box blue">
+          <div class="param-label">Evaporator Outlet Temp.</div>
+          <div class="param-value" id="pvEvapOutTemp">24.0 Â°C</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ---------------- EVENT LOG (full width) ---------------- -->
+  <section class="panel log-panel">
+    <div class="panel-header"><span>Event Log</span></div>
+    <ul class="log-list" id="eventLog"></ul>
+  </section>
+
+</main>
+
+<script src="{% static 'refrigerator/js/simulation.js' %}?v=2.4"></script>
+<script src="{% static 'refrigerator/js/history.js' %}?v=2.3"></script>
+<script src="{% static 'refrigerator/js/ui.js' %}?v=3.1"></script>
+<script src="{% static 'refrigerator/js/app.js' %}?v=2.3"></script>
+</body>
+</html>

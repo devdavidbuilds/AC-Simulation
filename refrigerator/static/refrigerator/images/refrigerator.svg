@@ -1,0 +1,22 @@
+<!--
+  Reference/preview icon only.
+
+  The functional machine mimic used by the simulation is embedded
+  directly inside templates/refrigerator/index.html (not loaded as
+  an external image) so that simulation.js / ui.js can reach each
+  component with document.getElementById(...). This file is kept
+  as a small standalone static asset (e.g. for a favicon, README,
+  or future thumbnail use).
+-->
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <rect x="10" y="8" width="60" height="104" fill="#e9ebec" stroke="#4b5157" stroke-width="3"/>
+  <rect x="52" y="8" width="18" height="104" fill="#dfe2e4" stroke="#4b5157" stroke-width="2"/>
+  <rect x="20" y="24" width="36" height="14" fill="#cfd3d6" stroke="#5a6167" stroke-width="1.5"/>
+  <line x1="20" y1="56" x2="56" y2="56" stroke="#9aa0a6" stroke-width="2"/>
+  <line x1="20" y1="76" x2="56" y2="76" stroke="#9aa0a6" stroke-width="2"/>
+  <line x1="20" y1="96" x2="56" y2="96" stroke="#9aa0a6" stroke-width="2"/>
+  <rect x="80" y="70" width="30" height="24" fill="#cfd3d6" stroke="#4b5157" stroke-width="3"/>
+  <circle cx="95" cy="40" r="14" fill="#eef0f1" stroke="#4b5157" stroke-width="3"/>
+  <path d="M95,30 L95,50 M85,40 L105,40" stroke="#7a8188" stroke-width="3"/>
+  <path d="M80,70 L95,55 M110,70 L95,55" stroke="#5a6167" stroke-width="3" fill="none"/>
+</svg>

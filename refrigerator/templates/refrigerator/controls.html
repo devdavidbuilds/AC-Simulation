@@ -1,0 +1,529 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AHU Controls & Monitoring — {{ unit_tag }}</title>
+<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=2.4">
+<style>
+  /* ============================================================
+     PAGE 2: AHU CONTROLS & MONITORING
+     Dedicated control and monitoring page for detailed operation.
+     ============================================================ */
+
+  .ctrl-page-main {
+    padding: 12px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .ctrl-page-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .ctrl-section {
+    background: var(--panel-bg);
+    border: 1px solid var(--line);
+    box-shadow: inset 0 0 0 1px #ffffff70;
+  }
+
+  .ctrl-section-header {
+    background: var(--panel-bg-alt);
+    border-bottom: 1px solid var(--line);
+    padding: 8px 12px;
+    font: 800 11px var(--font-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--c-text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ctrl-section-body {
+    padding: 12px;
+  }
+
+  /* Larger control cards for the dedicated controls page */
+  .ctrl-card {
+    border: 1px solid #9aa5ab;
+    background: #ffffff;
+    padding: 12px 14px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+    position: relative;
+  }
+
+  .ctrl-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .ctrl-card.valve-card::before { background: #c0392b; }
+  .ctrl-card.fan-card::before { background: #1f9d55; }
+  .ctrl-card.damper-card::before { background: #247aa8; }
+  .ctrl-card.vav-card::before { background: #7c3aed; }
+  .ctrl-card.vfd-card::before { background: #6b7280; }
+  .ctrl-card.temp-card::before { background: #d97706; }
+
+  .ctrl-card-title {
+    font: 900 11px var(--font-mono);
+    color: #34414a;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e0e4e7;
+  }
+
+  .ctrl-card-readout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .ctrl-card-readout span {
+    font: 700 10px var(--font-mono);
+    color: #5f6b73;
+    text-transform: uppercase;
+  }
+
+  .ctrl-card-readout strong {
+    font: 900 14px var(--font-mono);
+    color: #176b39;
+  }
+
+  .ctrl-card .actuator-slider {
+    width: 100%;
+    height: 8px;
+    margin: 4px 0;
+  }
+
+  .ctrl-card .slider-scale {
+    font-size: 9px;
+  }
+
+  /* Monitoring grid */
+  .monitor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .monitor-item {
+    background: #f6f7f8;
+    border: 1px solid var(--line-soft);
+    padding: 8px 10px;
+  }
+
+  .monitor-item .mon-label {
+    font: 700 9px var(--font-mono);
+    color: #5f6b73;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .monitor-item .mon-value {
+    font: 900 14px var(--font-mono);
+    color: var(--c-green);
+    margin-top: 3px;
+  }
+
+  .monitor-item.digital .mon-value {
+    background: var(--digital-bg);
+    color: var(--c-green-glow);
+    padding: 4px 8px;
+    margin-top: 4px;
+    font-size: 15px;
+    text-align: right;
+  }
+
+  /* Back link */
+  .ctrl-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: 800 10px var(--font-mono);
+    color: #1b4f72;
+    background: #e8f4fc;
+    border: 1px solid #b8daf2;
+    border-radius: 3px;
+    padding: 6px 12px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .ctrl-back-link:hover {
+    background: #d4ebfa;
+    color: #0f324a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  }
+
+  .ctrl-full-width {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 900px) {
+    .ctrl-page-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER (same style as main page)
+     ============================================================ -->
+<header class="hmi-header">
+  <div class="title-block">
+    <div class="system-title">AHU Controls & Monitoring</div>
+    <div class="zone-subtitle">{{ plant_name }} &nbsp;—&nbsp; {{ unit_name }} &nbsp;—&nbsp; {{ unit_tag }}</div>
+  </div>
+  <div class="meta-block">
+    <div class="meta-item">
+      <span class="meta-label">Date</span>
+      <span class="meta-value" id="hdrDate2">--</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Time</span>
+      <span class="meta-value" id="hdrTime2">--</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Operator</span>
+      <span class="meta-value">MADHUMANOJ</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Page</span>
+      <span class="meta-value" style="color:#4fb3ef;">CONTROLS</span>
+    </div>
+  </div>
+</header>
+
+<div class="ctrl-page-main">
+
+  <!-- Navigation back to simulation -->
+  <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+    <a href="/" class="ctrl-back-link">← Back to AHU Simulation</a>
+    <span style="font: 800 10px var(--font-mono); color: #7a858c; letter-spacing: 0.06em;">DETAILED ACTUATOR CONTROLS & SYSTEM MONITORING</span>
+  </div>
+
+  <div class="ctrl-page-grid">
+
+    <!-- ============================================================
+         LEFT: ACTUATOR CONTROLS
+         ============================================================ -->
+    <div class="ctrl-section">
+      <div class="ctrl-section-header">
+        <span>Actuator Controls</span>
+        <span style="font-size: 9px; color: #7a858c;">MANUAL / COMMAND</span>
+      </div>
+      <div class="ctrl-section-body">
+
+        <!-- Supply Fan + VFD -->
+        <div class="ctrl-card fan-card">
+          <div class="ctrl-card-title">Supply Fan</div>
+          <div class="ctrl-card-readout">
+            <span>Fan Power</span>
+            <strong id="p2FanStatus" class="actuator-readout off">OFF</strong>
+          </div>
+          <label class="toggle-switch">
+            <input id="p2FanToggle" type="checkbox">
+            <span class="toggle-track"></span>
+            <span class="toggle-text">ON / OFF</span>
+          </label>
+        </div>
+
+        <div class="ctrl-card vfd-card">
+          <div class="ctrl-card-title">VFD Frequency</div>
+          <div class="ctrl-card-readout">
+            <span>Motor Speed</span>
+            <strong id="p2VfdHz">40.0 Hz</strong>
+          </div>
+          <input id="p2VfdSlider" class="actuator-slider vfd" type="range" min="0" max="60" value="40" step="0.5">
+          <div class="slider-scale"><span>0 Hz</span><span>MOTOR SPEED</span><span>60 Hz</span></div>
+        </div>
+
+        <!-- Cooling Valve -->
+        <div class="ctrl-card valve-card">
+          <div class="ctrl-card-title">Cooling Valve Command</div>
+          <div class="ctrl-card-readout">
+            <span>Opening</span>
+            <strong id="p2ValvePct">60 %</strong>
+          </div>
+          <input id="p2ValveSlider" class="actuator-slider valve" type="range" min="0" max="100" value="60" step="1">
+          <div class="slider-scale"><span>0%</span><span>VALVE OPENING</span><span>100%</span></div>
+        </div>
+
+        <!-- Supply Damper -->
+        <div class="ctrl-card damper-card">
+          <div class="ctrl-card-title">Supply Damper Command</div>
+          <div class="ctrl-card-readout">
+            <span>Position</span>
+            <strong id="p2DamperPct">70 %</strong>
+          </div>
+          <input id="p2DamperSlider" class="actuator-slider" type="range" min="0" max="100" value="70" step="1">
+          <div class="slider-scale"><span>0%</span><span>AIR FLOW</span><span>100%</span></div>
+        </div>
+
+        <!-- VAV Damper -->
+        <div class="ctrl-card vav-card">
+          <div class="ctrl-card-title">VAV Damper Command</div>
+          <div class="ctrl-card-readout">
+            <span>Position</span>
+            <strong id="p2VavPct">70 %</strong>
+          </div>
+          <input id="p2VavSlider" class="actuator-slider vav" type="range" min="0" max="100" value="70" step="1">
+          <div class="slider-scale"><span>0%</span><span>OUTDOOR / RETURN</span><span>100%</span></div>
+        </div>
+
+        <!-- Temperature Setpoint -->
+        <div class="ctrl-card temp-card">
+          <div class="ctrl-card-title">Temperature Setpoint</div>
+          <div class="ctrl-card-readout">
+            <span>Setpoint</span>
+            <strong id="p2SetTemp">22.0 °C</strong>
+          </div>
+          <input id="p2SetTempSlider" class="actuator-slider temp" type="range" min="16" max="28" value="22" step="0.5">
+          <div class="slider-scale"><span>16°C</span><span>SET TEMP</span><span>28°C</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ============================================================
+         RIGHT: MONITORING
+         ============================================================ -->
+    <div class="ctrl-section">
+      <div class="ctrl-section-header">
+        <span>System Monitoring</span>
+        <span id="p2SystemStatus" style="font: 900 10px var(--font-mono); color: #7a858c;">STOPPED</span>
+      </div>
+      <div class="ctrl-section-body">
+
+        <div class="monitor-grid">
+          <div class="monitor-item digital">
+            <div class="mon-label">Supply Air Temperature</div>
+            <div class="mon-value" id="p2SupplyTemp">24.0 °C</div>
+          </div>
+          <div class="monitor-item digital">
+            <div class="mon-label">Return Air Temperature</div>
+            <div class="mon-value" id="p2ReturnTemp">24.0 °C</div>
+          </div>
+          <div class="monitor-item digital">
+            <div class="mon-label">Temperature Setpoint</div>
+            <div class="mon-value" id="p2SetTempDisplay">22.0 °C</div>
+          </div>
+          <div class="monitor-item digital">
+            <div class="mon-label">Air Flow</div>
+            <div class="mon-value" id="p2Cfm">0 CFM</div>
+          </div>
+          <div class="monitor-item digital">
+            <div class="mon-label">Supply Static Pressure</div>
+            <div class="mon-value" id="p2StaticPressure">0 Pa</div>
+          </div>
+          <div class="monitor-item digital">
+            <div class="mon-label">VFD Frequency</div>
+            <div class="mon-value" id="p2VfdDisplay">40.0 Hz</div>
+          </div>
+          <div class="monitor-item">
+            <div class="mon-label">Cooling Valve Status</div>
+            <div class="mon-value" id="p2ValveStatus" style="color: #176b39;">MODULATING</div>
+          </div>
+          <div class="monitor-item">
+            <div class="mon-label">Supply Fan Status</div>
+            <div class="mon-value" id="p2FanStatusMon" style="color: #7a8188;">OFF</div>
+          </div>
+          <div class="monitor-item">
+            <div class="mon-label">System Command</div>
+            <div class="mon-value" id="p2Command" style="color: #34414a;">STOP</div>
+          </div>
+          <div class="monitor-item">
+            <div class="mon-label">System Fault / Alarm</div>
+            <div class="mon-value" id="p2Fault" style="color: #159447;">NONE</div>
+          </div>
+        </div>
+
+        <!-- Component → Control Mapping Reference -->
+        <div style="margin-top: 12px; padding: 10px; background: #f7f9fa; border: 1px solid #d1d5d8; border-radius: 3px;">
+          <div style="font: 900 9px var(--font-mono); color: #4a565e; letter-spacing: 0.06em; margin-bottom: 6px;">COMPONENT → CONTROL MAPPING</div>
+          <div style="font: 700 9px var(--font-mono); color: #5f6b73; line-height: 1.7;">
+            Supply Fan → Fan ON/OFF + VFD Frequency<br>
+            Cooling Coil → Cooling Valve Command<br>
+            Supply Damper → Supply Damper Command<br>
+            VAV Dampers → VAV Damper Command<br>
+            Supply Air → Temperature Setpoint
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   PAGE 2 — CONTROLS & MONITORING
+   Uses the SAME API endpoints as the simulation page.
+   Polls the latest telemetry state from the server every 2 seconds
+   to reflect the current state of the simulation running on Page 1.
+   ============================================================ */
+(function () {
+  "use strict";
+
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    const d = document.getElementById("hdrDate2");
+    const t = document.getElementById("hdrTime2");
+    if (d) d.textContent = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    if (t) t.textContent = now.toLocaleTimeString("en-GB", { hour12: false });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // State mirror (updated by API polling)
+  const state = {
+    valveOpening: 60,
+    damperPosition: 70,
+    fanOn: false,
+    vfdFrequency: 40,
+    vavPosition: 70,
+    setTemperature: 22,
+    airflowCfm: 0,
+    supplyAirTemperature: 24,
+    returnAirTemperature: 24,
+    supplyStaticPressure: 0,
+    systemStatus: "STOPPED"
+  };
+
+  // Element references
+  const els = {
+    fanToggle: document.getElementById("p2FanToggle"),
+    fanStatus: document.getElementById("p2FanStatus"),
+    vfdSlider: document.getElementById("p2VfdSlider"),
+    vfdHz: document.getElementById("p2VfdHz"),
+    valveSlider: document.getElementById("p2ValveSlider"),
+    valvePct: document.getElementById("p2ValvePct"),
+    damperSlider: document.getElementById("p2DamperSlider"),
+    damperPct: document.getElementById("p2DamperPct"),
+    vavSlider: document.getElementById("p2VavSlider"),
+    vavPct: document.getElementById("p2VavPct"),
+    setTempSlider: document.getElementById("p2SetTempSlider"),
+    setTemp: document.getElementById("p2SetTemp"),
+    supplyTemp: document.getElementById("p2SupplyTemp"),
+    returnTemp: document.getElementById("p2ReturnTemp"),
+    setTempDisplay: document.getElementById("p2SetTempDisplay"),
+    cfm: document.getElementById("p2Cfm"),
+    staticPressure: document.getElementById("p2StaticPressure"),
+    vfdDisplay: document.getElementById("p2VfdDisplay"),
+    valveStatus: document.getElementById("p2ValveStatus"),
+    fanStatusMon: document.getElementById("p2FanStatusMon"),
+    command: document.getElementById("p2Command"),
+    fault: document.getElementById("p2Fault"),
+    systemStatus: document.getElementById("p2SystemStatus")
+  };
+
+  // Send actuator command to the server and update local state
+  async function sendCommand(name, value) {
+    state[name] = Number(value);
+    renderState();
+  }
+
+  function sendFanCommand(on) {
+    state.fanOn = on;
+    renderState();
+  }
+
+  // Render current state to the UI
+  function renderState() {
+    const s = state;
+    const valve = Math.round(s.valveOpening);
+    const damper = Math.round(s.damperPosition);
+    const vav = Math.round(s.vavPosition);
+    const fanStatus = s.fanOn ? "ON" : "OFF";
+    const valveState = valve <= 2 ? "CLOSED" : (valve >= 98 ? "OPEN" : "MODULATING");
+    const ahuRunning = s.fanOn && s.vfdFrequency > 0;
+    const systemStatus = ahuRunning ? "RUNNING" : (s.fanOn ? "READY" : "STOPPED");
+
+    if (els.valvePct) els.valvePct.textContent = valve + " %";
+    if (els.damperPct) els.damperPct.textContent = damper + " %";
+    if (els.vavPct) els.vavPct.textContent = vav + " %";
+    if (els.vfdHz) els.vfdHz.textContent = s.vfdFrequency.toFixed(1) + " Hz";
+    if (els.setTemp) els.setTemp.textContent = s.setTemperature.toFixed(1) + " °C";
+    if (els.fanStatus) { els.fanStatus.textContent = fanStatus; els.fanStatus.className = "actuator-readout " + (s.fanOn ? "on" : "off"); }
+
+    if (els.valveSlider && document.activeElement !== els.valveSlider) els.valveSlider.value = s.valveOpening;
+    if (els.damperSlider && document.activeElement !== els.damperSlider) els.damperSlider.value = s.damperPosition;
+    if (els.vavSlider && document.activeElement !== els.vavSlider) els.vavSlider.value = s.vavPosition;
+    if (els.vfdSlider && document.activeElement !== els.vfdSlider) els.vfdSlider.value = s.vfdFrequency;
+    if (els.setTempSlider && document.activeElement !== els.setTempSlider) els.setTempSlider.value = s.setTemperature;
+    if (els.fanToggle && document.activeElement !== els.fanToggle) els.fanToggle.checked = s.fanOn;
+
+    // Monitoring
+    if (els.supplyTemp) els.supplyTemp.textContent = s.supplyAirTemperature.toFixed(1) + " °C";
+    if (els.returnTemp) els.returnTemp.textContent = s.returnAirTemperature.toFixed(1) + " °C";
+    if (els.setTempDisplay) els.setTempDisplay.textContent = s.setTemperature.toFixed(1) + " °C";
+    if (els.cfm) els.cfm.textContent = Math.round(s.airflowCfm) + " CFM";
+    if (els.staticPressure) els.staticPressure.textContent = Math.round(s.supplyStaticPressure) + " Pa";
+    if (els.vfdDisplay) els.vfdDisplay.textContent = s.vfdFrequency.toFixed(1) + " Hz";
+    if (els.valveStatus) { els.valveStatus.textContent = valveState; els.valveStatus.style.color = valve > 2 ? "#176b39" : "#7a8188"; }
+    if (els.fanStatusMon) { els.fanStatusMon.textContent = fanStatus; els.fanStatusMon.style.color = s.fanOn ? "#159447" : "#7a8188"; }
+    if (els.command) els.command.textContent = s.fanOn ? "START" : "STOP";
+    if (els.fault) els.fault.textContent = "NONE";
+    if (els.systemStatus) { els.systemStatus.textContent = systemStatus; els.systemStatus.style.color = ahuRunning ? "#159447" : "#7a8188"; }
+  }
+
+  // Wire control event handlers
+  if (els.valveSlider) els.valveSlider.addEventListener("input", function () { sendCommand("valveOpening", this.value); });
+  if (els.damperSlider) els.damperSlider.addEventListener("input", function () { sendCommand("damperPosition", this.value); });
+  if (els.vavSlider) els.vavSlider.addEventListener("input", function () { sendCommand("vavPosition", this.value); });
+  if (els.vfdSlider) els.vfdSlider.addEventListener("input", function () { sendCommand("vfdFrequency", this.value); });
+  if (els.setTempSlider) els.setTempSlider.addEventListener("input", function () { sendCommand("setTemperature", this.value); });
+  if (els.fanToggle) els.fanToggle.addEventListener("change", function () { sendFanCommand(this.checked); });
+
+  // Poll latest telemetry from the database to show real-time monitoring data
+  async function pollLatest() {
+    try {
+      const resp = await fetch("/api/telemetry/range-info/");
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.latest_record) {
+          const r = data.latest_record;
+          state.valveOpening = r.valve_opening ?? state.valveOpening;
+          state.damperPosition = r.damper_position ?? state.damperPosition;
+          state.fanOn = r.fan_on ?? state.fanOn;
+          state.vfdFrequency = r.vfd_frequency ?? state.vfdFrequency;
+          state.vavPosition = r.vav_position ?? state.vavPosition;
+          state.setTemperature = r.set_temperature ?? state.setTemperature;
+          state.airflowCfm = r.airflow_cfm ?? state.airflowCfm;
+          state.supplyAirTemperature = r.supply_air_temperature ?? state.supplyAirTemperature;
+          state.returnAirTemperature = r.return_air_temperature ?? state.returnAirTemperature;
+          state.supplyStaticPressure = r.supply_static_pressure ?? state.supplyStaticPressure;
+          state.systemStatus = r.system_status ?? state.systemStatus;
+          renderState();
+        }
+      }
+    } catch (e) {
+      console.warn("Page 2 polling error:", e);
+    }
+  }
+
+  // Initial render + start polling
+  renderState();
+  pollLatest();
+  setInterval(pollLatest, 2000);
+
+})();
+</script>
+</body>
+</html>

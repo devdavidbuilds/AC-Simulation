@@ -1,0 +1,779 @@
+/* ============================================================
+   REFRIGERATION CYCLE — 4-COMPONENT REAL-TIME MONITOR
+   Style target: BMS / HMI / SCADA operator screen.
+   No fault/alarm styling in this version — this is a real-time
+   working demonstration of Compressor / Condenser / Capillary
+   Tube / Evaporator only.
+   ============================================================ */
+
+:root {
+  --bg: #d9dcdf;
+  --panel-bg: #eef0f1;
+  --panel-bg-alt: #e4e7e9;
+  --header-bg: #23282d;
+  --line: #4b5157;
+  --line-soft: #9aa0a6;
+  --digital-bg: #0c1210;
+
+  --c-green: #1f9d55;
+  --c-green-glow: #35c96f;
+  --c-blue: #1c7fc4;
+  --c-blue-glow: #4fb3ef;
+  --c-orange: #d97b19;
+  --c-red: #c8321f;
+  --c-gray: #7a8188;
+  --c-text: #1c2023;
+  --c-text-dim: #565d63;
+  --c-text-inverse: #e7e9ea;
+
+  --font-ui: "Segoe UI", "Inter", Arial, sans-serif;
+  --font-mono: "Consolas", "Roboto Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--c-text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.hmi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--header-bg);
+  color: var(--c-text-inverse);
+  border-bottom: 3px solid var(--line);
+  padding: 10px 18px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hmi-header .title-block { display: flex; flex-direction: column; line-height: 1.25; }
+.hmi-header .title-block .system-title {
+  font-size: 18px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+}
+.hmi-header .title-block .zone-subtitle { font-size: 12px; color: #b9c0c6; letter-spacing: 0.04em; }
+
+.hmi-header .meta-block { display: flex; gap: 22px; font-family: var(--font-mono); font-size: 12px; }
+.hmi-header .meta-item { display: flex; flex-direction: column; align-items: flex-start; min-width: 90px; }
+.hmi-header .meta-item .meta-label { color: #8b939a; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+.hmi-header .meta-item .meta-value { color: #f1f3f4; font-weight: 600; }
+.hmi-header .meta-item.mode-live .meta-value { color: var(--c-green-glow); }
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+
+.hmi-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 10px;
+  padding: 10px;
+  align-items: start;
+}
+
+.panel { background: var(--panel-bg); border: 1px solid var(--line); box-shadow: inset 0 0 0 1px #ffffff70; }
+.panel-header {
+  background: var(--panel-bg-alt);
+  border-bottom: 1px solid var(--line);
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-text-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.panel-body { padding: 10px; }
+
+.mimic-column { display: contents; }
+.mimic-column > .ahu-bms-panel { grid-column: 1 / -1; grid-row: 1; }
+.mimic-column > .mimic-panel { grid-column: 1; grid-row: 2; }
+.mimic-column > .panel:not(.ahu-bms-panel):not(.mimic-panel) { grid-column: 1 / -1; grid-row: 3; }
+.side-column { grid-column: 2; grid-row: 2; min-width: 0; }
+.log-panel { grid-column: 1 / -1; grid-row: 4; }
+.mimic-panel .panel-body { padding: 4px; }
+
+.mimic-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+  background: #f4f5f6;
+  background-image: linear-gradient(#c9cdd0 1px, transparent 1px), linear-gradient(90deg, #c9cdd0 1px, transparent 1px);
+  background-size: 28px 28px;
+  border: 1px solid var(--line-soft);
+}
+.mimic-svg-wrap svg { display: block; width: 100%; height: auto; min-width: 700px; }
+
+.control-strip { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-group .control-label { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-text-dim); font-weight: 700; }
+.control-row { display: flex; gap: 6px; align-items: center; }
+
+.side-column { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+button {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 8px 16px;
+  background: #f2f3f4;
+  color: var(--c-text);
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: inset 0 -2px 0 #00000022;
+}
+button:hover { background: #ffffff; }
+button:active { box-shadow: inset 0 2px 0 #00000022; transform: translateY(1px); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+button.btn-start { background: #1c6b3a; color: #eafff0; border-color: #0e3a1f; }
+button.btn-start:hover { background: #1f7d43; }
+button.btn-stop { background: #8f2318; color: #ffefec; border-color: #4d1109; }
+button.btn-stop:hover { background: #a52a1d; }
+
+/* ============================================================
+   STATUS PANEL
+   ============================================================ */
+
+.status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.status-item { display: flex; flex-direction: column; gap: 3px; border: 1px solid var(--line-soft); background: #f6f7f8; padding: 6px 8px; }
+.status-item .status-label { font-size: 10px; color: var(--c-text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.status-item .status-value { font-family: var(--font-mono); font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+
+.status-lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--c-gray); box-shadow: inset 0 0 0 1px #00000033; flex: none; }
+.status-lamp.on { background: var(--c-green); box-shadow: 0 0 6px 1px var(--c-green-glow); }
+.status-lamp.cool { background: var(--c-blue); box-shadow: 0 0 6px 1px var(--c-blue-glow); }
+.status-lamp.warm { background: var(--c-orange); box-shadow: 0 0 6px 1px #f0a24a; }
+
+.text-green { color: var(--c-green); }
+.text-orange { color: var(--c-orange); }
+.text-gray { color: var(--c-gray); }
+
+/* ============================================================
+   LIVE PARAMETERS
+   ============================================================ */
+
+.params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.param-box { border: 1px solid var(--line); background: #f6f7f8; }
+.param-box .param-label {
+  font-size: 10px; padding: 3px 6px; color: var(--c-text-dim);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--line-soft); background: var(--panel-bg-alt);
+}
+.param-box .param-value {
+  font-family: var(--font-mono); background: var(--digital-bg); color: var(--c-green-glow);
+  font-size: 16px; font-weight: 700; padding: 6px 8px; text-align: right; letter-spacing: 0.02em;
+}
+.param-box.blue .param-value { color: var(--c-blue-glow); }
+.param-box.warm .param-value { color: #ffbf5c; }
+
+/* ============================================================
+   EVENT LOG
+   ============================================================ */
+
+.log-panel { grid-column: 1 / -1; }
+.log-list { list-style: none; margin: 0; padding: 0; max-height: 140px; overflow-y: auto; font-family: var(--font-mono); font-size: 12px; }
+.log-list li { display: flex; gap: 12px; padding: 3px 10px; border-bottom: 1px solid #d6d9db; }
+.log-list li:nth-child(odd) { background: #f5f6f7; }
+.log-list .log-time { color: var(--c-text-dim); flex: none; width: 74px; }
+.log-list .log-msg { flex: 1; }
+.log-list li.sev-ok .log-msg { color: var(--c-green); }
+
+/* ============================================================
+   SVG MACHINE MIMIC
+   ============================================================ */
+
+.mimic-svg-wrap svg text { font-family: var(--font-mono); fill: var(--c-text); }
+.mimic-svg-wrap svg .label-major { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+.mimic-svg-wrap svg .label-minor { font-size: 10px; fill: var(--c-text-dim); letter-spacing: 0.03em; }
+.mimic-svg-wrap svg .readout { font-size: 12px; font-weight: 700; }
+
+.mimic-svg-wrap svg .pipe { fill: none; stroke: #5a6167; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.mimic-svg-wrap svg .pipe-inner { fill: none; stroke: #babfc3; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.mimic-svg-wrap svg .comp-body { stroke: var(--line); stroke-width: 2; fill: #cfd3d6; transition: fill 0.7s ease; }
+.component.state-off .comp-body { fill: #cfd3d6; }
+.component.state-running .comp-body { fill: #bfe3cb; }
+.component.state-cooling .comp-body { fill: #bcdcf2; }
+.component.state-hot .comp-body { fill: #f2c9a8; }
+
+.component .comp-indicator { fill: var(--c-gray); }
+.component.state-running .comp-indicator, .component.state-on .comp-indicator { fill: var(--c-green); }
+.component.state-cooling .comp-indicator { fill: var(--c-blue); }
+.component.state-hot .comp-indicator { fill: var(--c-orange); }
+
+/* Compressor motor active heartbeat pulse */
+.compressor-pulse { transform-box: fill-box; transform-origin: center; opacity: 0; }
+.compressor-pulse.active { animation: compPulse 1.0s ease-in-out infinite; }
+@keyframes compPulse {
+  0%   { opacity: 0.75; transform: scale(0.90); }
+  50%  { opacity: 0.08; transform: scale(1.20); }
+  100% { opacity: 0.75; transform: scale(0.90); }
+}
+
+/* Evaporator frost/glaze layer — fades in when cooling active */
+.evap-frost-layer { transition: opacity 1.2s ease; }
+.component.state-cooling .evap-frost-layer { opacity: 1; }
+
+/* Condenser heat glaze layer — fades in when condensing (state-hot) */
+.cond-heat-layer { transition: opacity 1.2s ease; }
+.component.state-hot .cond-heat-layer { opacity: 1; }
+
+/* Condenser heat-shed shimmer */
+.heat-shimmer { stroke: var(--c-orange); stroke-width: 1.5; fill: none; opacity: 0; }
+.heat-shimmer.active { animation: shimmerFade 1.4s ease-in-out infinite; }
+@keyframes shimmerFade {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 0.65; transform: translateY(-4px); }
+}
+
+/* Evaporator cold shimmer */
+.cold-shimmer { stroke: var(--c-blue); stroke-width: 1.5; fill: none; opacity: 0; }
+.cold-shimmer.active { animation: coldFade 1.6s ease-in-out infinite; }
+@keyframes coldFade {
+  0%, 100% { opacity: 0; transform: translateY(0); }
+  50% { opacity: 0.6; transform: translateY(4px); }
+}
+
+/* Capillary tube — subtle glow while metering flow */
+.capillary-coil { fill: none; stroke: #5a6167; stroke-width: 2.5; }
+.capillary-glow { fill: none; stroke: var(--c-blue-glow); stroke-width: 2; opacity: 0; transition: opacity 0.8s ease; }
+.capillary-glow.active { opacity: 0.75; }
+
+/* Refrigerant flow dots */
+.flow-dot { fill: var(--c-blue-glow); filter: drop-shadow(0 0 2px #1c7fc4aa); }
+.flow-dot.hot { fill: #e2734a; filter: drop-shadow(0 0 2px #c8502599); }
+
+/* Sensor probes */
+.sensor-probe circle { fill: #fff; stroke: var(--line); stroke-width: 1.5; }
+.sensor-probe .sensor-crosshair { stroke: var(--c-text-dim); stroke-width: 1; }
+.sensor-readout { font-family: var(--font-mono); font-size: 11px; font-weight: 700; fill: var(--c-text); }
+.sensor-readout.cool { fill: var(--c-blue); }
+.sensor-readout.hot { fill: var(--c-orange); }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 980px) {
+  .hmi-main { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .hmi-header { flex-direction: column; align-items: flex-start; }
+  .hmi-header .meta-block { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+  .hmi-header .meta-item { min-width: 0; }
+  .status-grid, .params-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   COLORED REFRIGERANT PIPE LINES
+   ============================================================ */
+
+/* High-P hot gas: compressor → condenser (red) */
+.pipe-hot       { fill: none; stroke: #a93226; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.pipe-hot-inner { fill: none; stroke: #e74c3c; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+/* High-P liquid: condenser → capillary (dark red / maroon) */
+.pipe-liquid       { fill: none; stroke: #7b241c; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.pipe-liquid-inner { fill: none; stroke: #c0392b; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Low-P cold vapour: capillary → evaporator → compressor (blue) */
+.pipe-cold       { fill: none; stroke: #1a5276; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.pipe-cold-inner { fill: none; stroke: #2e86c1; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ============================================================
+   HEAT EXCHANGER FINS & TUBE PASSES
+   ============================================================ */
+.fin-line  { fill: none; stroke: #9aa0a6; stroke-width: 1; }
+.tube-pass { fill: none; stroke: #7a8188; stroke-width: 2; }
+
+/* ============================================================
+   FAN BLADE ROTATION (triggered by component state classes)
+   ============================================================ */
+.fan-rotor {
+  transform-origin: 0px 0px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.component.state-running .fan-rotor { animation: fanSpin 0.38s linear infinite; }
+.component.state-hot     .fan-rotor { animation: fanSpin 0.45s linear infinite; }
+.component.state-cooling .fan-rotor { animation: fanSpin 0.60s linear infinite; }
+.component.state-off     .fan-rotor { animation: none; }
+@keyframes fanSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Pause animations when historical simulation playback is paused or in standby */
+.playback-paused .fan-rotor {
+  animation: none !important;
+  animation-play-state: paused !important;
+}
+.playback-paused .compressor-pulse {
+  animation: none !important;
+  opacity: 0 !important;
+}
+.playback-paused .heat-shimmer,
+.playback-paused .cold-shimmer {
+  animation: none !important;
+  opacity: 0 !important;
+}
+.playback-paused .capillary-glow {
+  opacity: 0 !important;
+}
+
+/* ============================================================
+   CAPILLARY TUBE COPPER HELICAL COIL
+   ============================================================ */
+.cap-coil-back  { filter: drop-shadow(0 2px 2px rgba(0,0,0,0.35)); }
+.cap-coil-front { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25)); }
+.cap-coil-shine { pointer-events: none; }
+
+/* Capillary glow — active flow effect */
+.capillary-glow { opacity: 0; transition: opacity 0.8s ease; }
+.capillary-glow.active { opacity: 0.85; filter: drop-shadow(0 0 6px #4fb3ef); }
+
+/* Wider minimum for the new 1100px viewBox */
+.mimic-svg-wrap svg { display: block; width: 100%; height: auto; min-width: 900px; }
+
+/* ============================================================
+   DIRECTIONAL FLOW ARROWS
+   ============================================================ */
+.flow-arrow {
+  filter: drop-shadow(0 1.5px 2px rgba(0,0,0,0.3));
+  transition: opacity 0.3s ease;
+}
+.flow-arrow-hot  { fill: #e74c3c; stroke: #922b21; stroke-width: 1.2; }
+.flow-arrow-cold { fill: #2e86c1; stroke: #1b4f72; stroke-width: 1.2; }
+
+/* ============================================================
+   SIMULATION MODE SWITCHER & HISTORICAL PLAYBACK CONTROLS
+   ============================================================ */
+
+.mode-switcher {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--line-soft);
+  padding-bottom: 8px;
+  width: 100%;
+}
+
+.mode-tab {
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 3px;
+  cursor: pointer;
+  background: #eaedf0;
+  color: var(--c-text-dim);
+  border: 1px solid var(--line);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-tab:hover {
+  background: #ffffff;
+  color: var(--c-text);
+}
+
+.mode-tab.active {
+  background: #1b4f72;
+  color: #ffffff;
+  border-color: #0f324a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+.mode-tab.active.live {
+  background: #1c6b3a;
+  border-color: #0e3a1f;
+}
+
+.mode-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.db-status-badge {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: #eef1f3;
+  color: #555;
+  border: 1px solid var(--line-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.db-status-badge.saved {
+  background: #e6f7ec;
+  color: #1c6b3a;
+  border-color: #b7e4c7;
+}
+.db-status-badge.error {
+  background: #fdeeed;
+  color: #a52a1d;
+  border-color: #f5c2be;
+}
+
+/* Historical Controls Layout */
+.hist-query-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  background: #f6f8f9;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+}
+
+.hist-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hist-field label {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--c-text-dim);
+}
+
+.hist-input, .hist-select {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #ffffff;
+  color: var(--c-text);
+}
+
+.btn-hist-load {
+  background: #1b4f72;
+  color: #ffffff;
+  border-color: #0f324a;
+  padding: 6px 14px;
+}
+.btn-hist-load:hover { background: #236592; }
+
+.btn-preset {
+  font-size: 10px;
+  padding: 4px 8px;
+  background: #e9ecef;
+  color: #333;
+  border: 1px solid #ced4da;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.btn-preset:hover { background: #dde2e6; }
+
+/* Timeline Scrubber */
+.hist-player-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  padding: 10px 12px;
+  border-radius: 3px;
+}
+
+.hist-scrubber-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hist-slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #d8dde1;
+  outline: none;
+  cursor: pointer;
+  accent-color: #1b4f72;
+}
+
+.hist-time-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #1b4f72;
+  background: #e8f4fc;
+  padding: 3px 8px;
+  border-radius: 2px;
+  border: 1px solid #b8daf2;
+  white-space: nowrap;
+}
+
+.hist-controls-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.hist-btn-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.btn-hist-play {
+  background: #2b6cb0;
+  color: #fff;
+  border-color: #1a4971;
+  padding: 6px 14px;
+  min-width: 85px;
+}
+.btn-hist-play:hover { background: #3182ce; }
+.btn-hist-play.playing { background: #d69e2e; color: #fff; border-color: #975a16; }
+
+.btn-hist-step {
+  padding: 6px 10px;
+  background: #f1f3f5;
+  color: #333;
+}
+.btn-hist-step:hover { background: #e2e6ea; }
+
+.hist-speed-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-text-dim);
+}
+
+.hist-info-msg {
+  font-size: 11px;
+  color: var(--c-text-dim);
+  font-style: italic;
+}
+
+
+
+/* ============================================================
+   ACTUATORS / AHU AIR-SIDE CONTROL LAYER
+   ============================================================ */
+.actuator-panel { overflow: hidden; }
+.actuator-header-state { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
+.actuator-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 0.8fr); gap: 10px; }
+.ahu-mimic-wrap { min-width: 0; overflow: hidden; border: 1px solid var(--line-soft); background: #f4f6f7; }
+.ahu-mimic-wrap svg { display: block; width: 100%; height: auto; min-width: 650px; }
+#ahuSvg text { font-family: var(--font-mono); }
+.ahu-title { font-size: 13px; font-weight: 800; fill: #3d464d; letter-spacing: .08em; }
+.ahu-label { font-size: 10px; font-weight: 800; fill: #4f5a62; letter-spacing: .04em; }
+.ahu-small { font-size: 8px; font-weight: 700; fill: #68747c; letter-spacing: .03em; }
+.ahu-duct { fill: none; stroke: #7f8a91; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 2px 2px #0003); }
+.ahu-duct.outdoor { stroke: #9ba6ad; }
+.ahu-damper-group { transform-box: fill-box; transform-origin: center; transition: transform .35s cubic-bezier(.22,.61,.36,1); }
+.ahu-damper-group line { stroke: #3a6a8c; stroke-width: 5; stroke-linecap: round; }
+.water-flow { fill: #37a8e8; filter: drop-shadow(0 0 3px #37a8e899); transition: opacity .3s ease; }
+.water-flow circle { animation: waterPulse .9s linear infinite; }
+.water-flow circle:nth-child(2) { animation-delay: -.18s; }
+.water-flow circle:nth-child(3) { animation-delay: -.36s; }
+.water-flow circle:nth-child(4) { animation-delay: -.54s; }
+.water-flow circle:nth-child(5) { animation-delay: -.72s; }
+@keyframes waterPulse { 0%{ transform: translateY(0); opacity:.25 } 50%{ transform: translateY(8px); opacity:1 } 100%{ transform: translateY(16px); opacity:.25 } }
+.vfd-text { font-size: 8px; font-weight: 800; fill: #a8ffbd; }
+.digital-label { font-size: 8px; font-weight: 700; fill: #82939d; }
+.digital-value { font-size: 12px; font-weight: 800; fill: #61e88c; }
+.actuator-controls { display: grid; grid-template-columns: 1fr; gap: 7px; align-content: start; }
+.actuator-control-card { border: 1px solid var(--line-soft); background: #f7f8f9; padding: 7px 9px; box-shadow: inset 0 1px 0 #fff; }
+.actuator-control-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 5px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .045em; color: var(--c-text-dim); }
+.actuator-control-head strong { font-family: var(--font-mono); color: #1c6b3a; font-size: 12px; }
+.actuator-slider { width: 100%; height: 7px; margin: 0; cursor: pointer; accent-color: #247aa8; }
+.actuator-slider.valve { accent-color: #c0392b; }
+.actuator-slider.vfd { accent-color: #6b7280; }
+.actuator-slider.vav { accent-color: #7c3aed; }
+.actuator-slider.temp { accent-color: #d97706; }
+.slider-scale { display: flex; justify-content: space-between; margin-top: 2px; font-size: 8px; color: #7a8188; font-family: var(--font-mono); }
+.actuator-readout.on { color: var(--c-green) !important; }
+.actuator-readout.off { color: #7a8188 !important; }
+.toggle-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.toggle-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle-track { width: 52px; height: 25px; border-radius: 14px; background: #aab1b6; border: 1px solid #687179; position: relative; box-shadow: inset 0 2px 4px #0003; transition: .25s ease; }
+.toggle-track::after { content: ''; position: absolute; width: 19px; height: 19px; top: 2px; left: 3px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0005; transition: .25s ease; }
+.toggle-switch input:checked + .toggle-track { background: #1f9d55; border-color: #116b38; }
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(25px); }
+.toggle-text { font-size: 10px; font-weight: 800; color: var(--c-text-dim); }
+.setpoint-card { background: linear-gradient(90deg, #fff8e8, #f7f8f9); }
+@media (max-width: 1180px) { .actuator-layout { grid-template-columns: 1fr; } .ahu-mimic-wrap svg { min-width: 700px; } }
+@media (max-width: 620px) { .ahu-mimic-wrap svg { min-width: 600px; } }
+
+/* ============================================================
+   AHU / BMS REFERENCE LAYOUT — integrated HMI
+   ============================================================ */
+.ahu-bms-panel { overflow: hidden; }
+.ahu-bms-body { padding: 8px; }
+.ahu-page-layout { display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+.ahu-page-layout > .side-column { display:contents; }
+.ahu-page-layout > .side-column > .panel { width:100%; }
+.ahu-bms-grid { display:grid; grid-template-columns:minmax(0, 1fr); gap:10px; align-items:stretch; }
+.ahu-main-card { min-width:0; border:1px solid var(--line-soft); background:#f3f5f6; }
+.ahu-instrument-strip { display:grid; grid-template-columns:repeat(6, minmax(110px,1fr)); gap:1px; background:#c5cdd2; border-bottom:1px solid #9aa5ab; }
+.ahu-instrument { background:#e8ecee; padding:6px 8px; min-height:44px; }
+.ahu-instrument span { display:block; font:700 8px var(--font-mono); color:#5f6b73; letter-spacing:.04em; }
+.ahu-instrument strong { display:block; margin-top:3px; font:800 12px var(--font-mono); color:#176b39; }
+.ahu-graphic-wrap { overflow:hidden; background:linear-gradient(#fafbfc,#eef1f3); }
+.ahu-graphic-wrap svg { display:block; width:100%; height:auto; min-width:0; }
+#ahuSvg text { font-family:var(--font-mono); }
+.ahu-title { font-size:15px; font-weight:900; fill:#34414a; letter-spacing:.08em; }
+.ahu-label { font-size:11px; font-weight:900; fill:#48555d; letter-spacing:.045em; }
+.ahu-small { font-size:8px; font-weight:800; fill:#68747c; letter-spacing:.035em; }
+.ahu-digital { font:800 11px var(--font-mono); fill:#27c96b; }
+.ahu-duct { fill:none; stroke:#7e8a91; stroke-width:24; stroke-linecap:round; stroke-linejoin:round; filter:drop-shadow(0 2px 2px #0003); }
+.ahu-duct.outdoor { stroke:#9ca7ae; }
+.ahu-duct.return { stroke:#87939a; }
+.ahu-duct.supply { stroke:#7d8990; }
+.ahu-damper-group { transform-box:fill-box; transform-origin:center; transition:transform .35s cubic-bezier(.22,.61,.36,1); }
+.ahu-damper-group line { stroke:#3a6a8c; stroke-width:6; stroke-linecap:round; }
+.ahu-damper-frame { fill:none; stroke:#2a4f6e; stroke-width:2.5; }
+.water-flow { fill:#35aee9; filter:drop-shadow(0 0 4px #35aee988); }
+.water-flow circle { animation:ahuWaterPulse .85s linear infinite; }
+.water-flow circle:nth-child(2){animation-delay:-.21s}.water-flow circle:nth-child(3){animation-delay:-.42s}.water-flow circle:nth-child(4){animation-delay:-.63s}
+@keyframes ahuWaterPulse {0%{transform:translateX(0);opacity:.15}50%{transform:translateX(7px);opacity:1}100%{transform:translateX(14px);opacity:.15}}
+.vfd-text { font:800 9px var(--font-mono); fill:#a9ffbd; }
+.air-dot { fill:#38a9e6; filter:drop-shadow(0 0 3px #38a9e688); }
+.actuator-slider { width:100%; height:7px; margin:0; cursor:pointer; accent-color:#247aa8; }
+.actuator-slider.valve{accent-color:#c0392b}.actuator-slider.heating{accent-color:#c66b3d}.actuator-slider.vfd{accent-color:#6b7280}.actuator-slider.vav{accent-color:#7c3aed}.actuator-slider.temp{accent-color:#d97706}
+.slider-scale { display:flex; justify-content:space-between; margin-top:2px; font:700 8px var(--font-mono); color:#7a8188; }
+.actuator-readout.on{color:#159447!important}.actuator-readout.off{color:#7a8188!important}
+.toggle-switch{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}.toggle-switch input{position:absolute;opacity:0;pointer-events:none}.toggle-track{width:52px;height:25px;border-radius:14px;background:#aab1b6;border:1px solid #687179;position:relative;box-shadow:inset 0 2px 4px #0003;transition:.25s ease}.toggle-track::after{content:'';position:absolute;width:19px;height:19px;top:2px;left:3px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0005;transition:.25s ease}.toggle-switch input:checked + .toggle-track{background:#1f9d55;border-color:#116b38}.toggle-switch input:checked + .toggle-track::after{transform:translateX(25px)}.toggle-text{font:800 10px var(--font-mono);color:#5b666d}
+.setpoint-card{background:linear-gradient(90deg,#fff8e8,#f7f8f9)}
+.actuator-header-state{display:inline-flex;align-items:center;gap:6px;font:800 10px var(--font-mono)}
+@media(max-width:900px){.hmi-main{grid-template-columns:minmax(0,1fr)}.ahu-bms-panel,.mimic-column>.mimic-panel,.mimic-column>.panel:not(.ahu-bms-panel):not(.mimic-panel),.side-column,.log-panel{grid-column:1;grid-row:auto}.ahu-graphic-wrap{overflow-x:auto}.ahu-graphic-wrap svg{min-width:900px}}
+@media(max-width:620px){.ahu-instrument-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ahu-instrument{min-height:52px}}
+
+
+/* ============================================================
+   AHU DIAGRAM CLEAN WORKFLOW / COIL POLISH
+   ============================================================ */
+.ahu-stage-line { stroke:#c4cdd2; stroke-width:1.5; stroke-dasharray:4 5; }
+.ahu-stage { font:800 7px var(--font-mono); fill:#7a858c; letter-spacing:.08em; text-anchor:middle; }
+.ahu-mixing-mark { stroke:#7c8990; stroke-width:2; opacity:.75; }
+.ahu-filter-stage { filter:drop-shadow(0 1px 1px #0002); }
+.ahu-coil-fins path { opacity:.78; transition:stroke .3s ease; }
+.ahu-coil-tube { fill:none; stroke:#65737b; stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s ease; }
+.ahu-coil-glow { fill:none; stroke:#48c8f0; stroke-width:10; stroke-linecap:round; stroke-linejoin:round; filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .3s ease; }
+.ahu-coil-header { fill:none; stroke:#65737b; stroke-width:5; stroke-linecap:round; }
+.ahu-water-pipe { fill:none; stroke:#2386b9; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.ahu-flow-arrow { fill:none; stroke:#73909b; stroke-width:3; stroke-linecap:round; opacity:.3; }
+.ahu-heating-coil { transition:filter .25s ease; }
+#ahuHeatingCoilGlow { transition:opacity .25s ease; }
+.ahu-heating-fins { fill:none; stroke:#d67547; stroke-width:1; }
+.ahu-heating-tube { fill:none; stroke:#a9472d; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.ahu-heating-header { fill:none; stroke:#a9472d; stroke-width:3; stroke-linecap:round; }
+.ahu-fan-center { overflow:visible; }
+.ahu-fan-rotor { transform-box:fill-box; transform-origin:50% 50%; }
+.ahu-fan-rotor.active { animation:ahuFanSpin var(--fan-speed,.45s) linear infinite; }
+.ahu-fan-rotor:not(.active) { opacity:.55; }
+@keyframes ahuFanSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+.ahu-valve-actuator { fill:#d6b65f; stroke:#8b6d2f; stroke-width:1; }
+.ahu-valve-stem { stroke:#9b7b32; stroke-width:1.5; }
+.ahu-valve-body { fill:#c7a24b; stroke:#785d23; stroke-width:1.2; }
+.ahu-valve-detail { fill:#f4e2a5; stroke:#82692f; stroke-width:.8; }
+.ahu-control-valve { transition:filter .25s ease; }
+.ahu-control-valve.active { filter:drop-shadow(0 0 5px rgba(190,151,52,.36)); }
+#inlineValveSlider, #inlineHeatingValveSlider { accent-color:#b58a2a; }
+.airflow-streams { pointer-events:none; }
+.air-stream-line { fill:none; stroke:url(#ahuAirflowTransition); stroke-width:4; stroke-linecap:round; stroke-dasharray:28 18; stroke-dashoffset:0; filter:drop-shadow(0 0 3px #67c8dfbb); opacity:0; transition:opacity .25s ease; }
+.air-stream-branch { stroke:#d8eef5; stroke-width:3.6; filter:drop-shadow(0 0 3px #91c9d7bb); }
+.air-streak { stroke-width:3.6; filter:drop-shadow(0 0 3px #5bb9d6cc); }
+.air-dot { filter:drop-shadow(0 0 3px #5bb9d6aa); }
+.air-direction-arrow { filter:drop-shadow(0 0 2px #5bb9d688); }
+
+/* Compact controls are embedded in the AHU diagram's reserved lower area. */
+#ahuSvg foreignObject { overflow: visible; }
+#ahuSvg .inline-ctrl-card { width:100%; height:100%; overflow:hidden; }
+
+.inline-ctrl-card {
+  border: 1px solid #9aa5ab;
+  background: #ffffff;
+  padding: 6px 8px;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), inset 0 1px 0 #fff;
+  position: relative;
+}
+
+.inline-ctrl-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.inline-ctrl-vav::before { background: #7c3aed; }
+.inline-ctrl-valve::before { background: #c0392b; }
+.inline-ctrl-heating::before { background: #c66b3d; }
+.inline-ctrl-fan::before { background: #1f9d55; }
+.inline-ctrl-damper::before { background: #247aa8; }
+.inline-ctrl-temp::before { background: #d97706; }
+
+.inline-ctrl-title {
+  font: 900 9px var(--font-mono);
+  color: #3a454d;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid #e0e4e7;
+}
+
+.inline-ctrl-readout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.inline-ctrl-readout span {
+  font: 700 8px var(--font-mono);
+  color: #5f6b73;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.inline-ctrl-readout strong {
+  font: 900 11px var(--font-mono);
+  color: #176b39;
+}
+
+.inline-ctrl-divider {
+  height: 1px;
+  background: #d8dde0;
+  margin: 5px 0 4px;
+}
+
+
