@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AHU / Air-Side Simulation â€” {{ unit_tag }}</title>
-<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=3.4">
+<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=3.7">
 </head>
 <body>
 
@@ -36,7 +36,7 @@
     </div>
   </div>
 </header>
-
+  
 <!-- PAGE NAVIGATION -->
 <nav class="page-nav">
   <a href="/" class="page-nav-link active">AHU / Air-Side Simulation</a>
@@ -68,8 +68,10 @@
               <div class="ahu-instrument"><span>SUPPLY STATIC PRESSURE</span><strong id="ahuStaticPressure">0 Pa</strong></div>
             </div>
 
+            <div id="ahuAlertBar" class="ahu-alert-bar" role="alert" aria-live="polite" hidden></div>
+
             <div class="ahu-graphic-wrap">
-              <svg id="ahuSvg" viewBox="0 0 1180 550" xmlns="http://www.w3.org/2000/svg" aria-label="Animated air handling unit">
+              <svg id="ahuSvg" viewBox="0 0 1180 575" xmlns="http://www.w3.org/2000/svg" aria-label="Animated air handling unit">
                 <defs>
                   <linearGradient id="ahuShell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8fafb"/><stop offset="0.5" stop-color="#d5dde2"/><stop offset="1" stop-color="#9ca8af"/></linearGradient>
                   <linearGradient id="ahuCoilFace" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e1e7ea"/><stop offset="0.5" stop-color="#b9c5ca"/><stop offset="1" stop-color="#89969c"/></linearGradient>
@@ -138,6 +140,7 @@
                     <stop offset="100%" stop-color="#0369a1"/>
                   </linearGradient>
 
+                  <linearGradient id="ahuDamperBladeGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1d4f75"/><stop offset=".22" stop-color="#3f98cf"/><stop offset=".5" stop-color="#a6e0f7"/><stop offset=".78" stop-color="#3b8fc4"/><stop offset="1" stop-color="#1d4f75"/></linearGradient>
                   <clipPath id="ahuAirDuctClip" clipPathUnits="userSpaceOnUse">
                     <rect x="18" y="86" width="127" height="52"/>
                     <rect x="18" y="232" width="127" height="52"/>
@@ -148,10 +151,12 @@
                   </clipPath>
                   <filter id="ahuShadow2" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter>
                   <marker id="ahuAirArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#1876b8"/></marker>
+                  <marker id="ahuHotArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#e0662c"/></marker>
+                  <linearGradient id="ahuValveGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6da7a"/><stop offset=".5" stop-color="#d9ab3a"/><stop offset="1" stop-color="#9f7620"/></linearGradient>
                   <marker id="ahuWaterArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#2799d4"/></marker>
                 </defs>
 
-                <text x="38" y="43" class="ahu-title">AHU / AIR-SIDE PROCESS ENCLOSED CASING</text>
+                <text x="8" y="20" class="ahu-title" style="font-size:13px">AHU / AIR-SIDE PROCESS ENCLOSED CASING</text>
 
                 <!-- ============================================================
                      1. CONTINUOUS HEAVY STRUCTURAL SKID BASE & ISOLATION MOUNTS
@@ -306,41 +311,35 @@
                 </g>
 
                 <!-- Stage workflow alignment line & labels -->
-                <path d="M250 318 H1130" class="ahu-stage-line"/>
+                <path d="M250 553 H1130" class="ahu-stage-line"/>
                 <g class="ahu-stage-labels">
-                  <text x="270" y="334" class="ahu-stage">MIX</text>
-                  <text x="335" y="334" class="ahu-stage">FILTER</text>
-                  <text x="425" y="334" class="ahu-stage">COIL</text>
-                  <text x="575" y="334" class="ahu-stage">HEAT</text>
-                  <text x="770" y="334" class="ahu-stage">FAN</text>
-                  <text x="933" y="334" class="ahu-stage">SUPPLY FILTER</text>
-                  <text x="1030" y="334" class="ahu-stage">DAMPER</text>
-                  <text x="1120" y="334" class="ahu-stage">SUPPLY</text>
+                  <text x="270" y="569" class="ahu-stage">MIX</text>
+                  <text x="335" y="569" class="ahu-stage">FILTER</text>
+                  <text x="425" y="569" class="ahu-stage">COIL</text>
+                  <text x="575" y="569" class="ahu-stage">HEAT</text>
+                  <text x="770" y="569" class="ahu-stage">FAN</text>
+                  <text x="933" y="569" class="ahu-stage">SUPPLY FILTER</text>
+                  <text x="1030" y="569" class="ahu-stage">DAMPER</text>
+                  <text x="1120" y="569" class="ahu-stage">SUPPLY</text>
                 </g>
 
                 <!-- Outdoor and return-air labels & dampers -->
-                <text x="34" y="74" class="ahu-label">OUTDOOR AIR</text>
-                <text x="34" y="304" class="ahu-label">RETURN AIR</text>
 
                 <!-- VAV Outdoor Damper frame -->
                 <rect class="ahu-damper-frame" x="118" y="86" width="72" height="52" rx="2"/>
-                <g id="ahuVavOutdoor" class="ahu-damper-group">
-                  <line x1="128" y1="88" x2="128" y2="136"/><line x1="148" y1="88" x2="148" y2="136"/><line x1="168" y1="88" x2="168" y2="136"/>
-                </g>
+                <rect class="ahu-damper-backplate" x="126" y="90" width="56" height="44"/>
+                <g id="ahuVavOutdoor" class="ahu-damper-group"><rect class="ahu-damper-blade" data-pitch="14.00" x="126.00" y="90" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="140.00" y="90" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="154.00" y="90" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="168.00" y="90" width="14.00" height="44"/></g>
+                <g class="ahu-damper-pins"><circle cx="133.00" cy="88" r="2.1"/><circle cx="133.00" cy="136" r="2.1"/><circle cx="147.00" cy="88" r="2.1"/><circle cx="147.00" cy="136" r="2.1"/><circle cx="161.00" cy="88" r="2.1"/><circle cx="161.00" cy="136" r="2.1"/><circle cx="175.00" cy="88" r="2.1"/><circle cx="175.00" cy="136" r="2.1"/></g>
                 <!-- VAV Return Damper frame -->
                 <rect class="ahu-damper-frame" x="118" y="232" width="72" height="52" rx="2"/>
-                <g id="ahuVavReturn" class="ahu-damper-group">
-                  <line x1="128" y1="234" x2="128" y2="282"/><line x1="148" y1="234" x2="148" y2="282"/><line x1="168" y1="234" x2="168" y2="282"/>
-                </g>
-                <text x="102" y="74" class="ahu-small">VAV OUTDOOR</text>
-                <text x="102" y="304" class="ahu-small">VAV RETURN</text>
+                <rect class="ahu-damper-backplate" x="126" y="236" width="56" height="44"/>
+                <g id="ahuVavReturn" class="ahu-damper-group"><rect class="ahu-damper-blade" data-pitch="14.00" x="126.00" y="236" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="140.00" y="236" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="154.00" y="236" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="168.00" y="236" width="14.00" height="44"/></g>
+                <g class="ahu-damper-pins"><circle cx="133.00" cy="234" r="2.1"/><circle cx="133.00" cy="282" r="2.1"/><circle cx="147.00" cy="234" r="2.1"/><circle cx="147.00" cy="282" r="2.1"/><circle cx="161.00" cy="234" r="2.1"/><circle cx="161.00" cy="282" r="2.1"/><circle cx="175.00" cy="234" r="2.1"/><circle cx="175.00" cy="282" r="2.1"/></g>
 
                 <!-- Mixing section marks -->
                 <g id="ahuMixingSection">
                   <rect x="205" y="94" width="52" height="168" rx="5" fill="#dfe5e8" fill-opacity="0.4" stroke="#69767e" stroke-width="1.5"/>
                   <path d="M218 115 L244 140 M218 140 L244 165 M218 165 L244 190 M218 190 L244 215 M218 215 L244 240" class="ahu-mixing-mark"/>
-                  <text x="215" y="279" class="ahu-label">MIX</text>
-                  <text x="207" y="293" class="ahu-small">AIR BLEND</text>
                 </g>
 
                 <!-- Filter -->
@@ -349,8 +348,6 @@
                   <path d="M279 113 L327 134 L279 155 L327 176 L279 197 L327 218 L279 239" fill="none" stroke="#7b878f" stroke-width="3"/>
                   <path d="M287 111 V246 M299 111 V246 M311 111 V246 M323 111 V246" stroke="#aab4ba" stroke-width="1.5" opacity=".65"/>
                   <circle id="ahuFilterLed" cx="303" cy="91" r="6" fill="#27ae60"/>
-                  <text x="281" y="279" class="ahu-label">FILTER</text>
-                  <text x="273" y="293" class="ahu-small">AIR CLEANING</text>
                 </g>
 
                 <!-- Clean cooling coil: fins + serpentine chilled-water circuit -->
@@ -366,8 +363,6 @@
                     <path d="M378 116 H470 C482 116 482 128 470 128 H378 C366 128 366 140 378 140 H470 C482 140 482 152 470 152 H378 C366 152 366 164 378 164 H470 C482 164 482 176 470 176 H378 C366 176 366 188 378 188 H470 C482 188 482 200 470 200 H378 C366 200 366 212 378 212 H470 C482 212 482 224 470 224 H378 C366 224 366 236 378 236 H470" class="ahu-coil-tube"/>
                     <path d="M378 116 V236 M470 116 V236" class="ahu-coil-header"/>
                   </g>
-                  <text x="377" y="279" class="ahu-label">COOLING COIL</text>
-                  <text x="377" y="293" class="ahu-small">CHW COIL BANK</text>
                 </g>
 
                 <!-- Heating coil, downstream of cooling and upstream of the fan -->
@@ -383,8 +378,6 @@
                     <path d="M528 116 H620 C628 116 628 128 620 128 H528 C520 128 520 140 528 140 H620 C628 140 628 152 620 152 H528 C520 152 520 164 528 164 H620 C628 164 628 176 620 176 H528 C520 176 520 188 528 188 H620 C628 188 628 200 620 200 H528 C520 200 520 212 528 212 H620 C628 212 628 224 620 224 H528 C520 224 520 236 528 236 H620" class="ahu-heating-tube"/>
                     <path d="M528 116 V236 M620 116 V236" class="ahu-heating-header"/>
                   </g>
-                  <text x="527" y="279" class="ahu-label">HEATING COIL</text>
-                  <text x="527" y="293" class="ahu-small">HOT-WATER / DX SERVICE</text>
                 </g>
 
                 <!-- Cooling-water circuit and valve -->
@@ -392,16 +385,49 @@
                 <path d="M470 258 V350 H345" class="ahu-water-pipe" marker-end="url(#ahuWaterArrow)"/>
                 <text x="345" y="72" class="ahu-small">CHW SUPPLY</text>
                 <text x="345" y="366" class="ahu-small">CHW RETURN</text>
-                <text x="425" y="40" class="ahu-small" text-anchor="middle">COOLING VALVE</text>
-                <text id="ahuValveCmd2" x="425" y="57" class="ahu-digital" text-anchor="middle">60 %</text>
+                <g class="rd-card" id="rd_coolValve"><rect class="rd-box" x="385" y="10" width="80" height="26" rx="3"/><text class="rd-title" x="425.0" y="19.5" text-anchor="middle">COOLING VALVE</text><line class="rd-sep" x1="388" y1="22.5" x2="462" y2="22.5"/><text class="rd-label" x="389" y="32">Position</text><text id="ahuValveCmd2" class="rd-val" x="461" y="32" text-anchor="end">--</text></g>
                 <g id="ahuCoolingValve" class="ahu-control-valve">
-                  <rect x="420" y="62" width="10" height="8" rx="2" class="ahu-valve-actuator"/>
-                  <line id="ahuValveStem" x1="425" y1="70" x2="425" y2="81" class="ahu-valve-stem"/>
-                  <rect x="416" y="77" width="18" height="10" rx="2" class="ahu-valve-body"/>
-                  <circle cx="425" cy="82" r="2" class="ahu-valve-detail"/>
+                  <line id="ahuValveStem" x1="425" y1="64" x2="425" y2="72" class="ahu-valve-stem"/>
+                  <rect x="410" y="48" width="30" height="16" rx="4" class="ahu-valve-actuator"/>
+                  <rect x="404" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
+                  <rect x="440" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
+                  <rect x="415" y="51" width="14" height="8" rx="2" class="ahu-valve-window"/>
+                  <circle cx="434" cy="55" r="2" class="ahu-valve-detail"/>
+                  <rect x="418" y="69" width="14" height="8" rx="2" class="ahu-valve-body"/>
+                  <rect x="407" y="75" width="36" height="14" rx="4" class="ahu-valve-body"/>
+                  <rect x="402" y="72" width="6" height="20" rx="1.5" class="ahu-valve-flange"/>
+                  <rect x="442" y="72" width="6" height="20" rx="1.5" class="ahu-valve-flange"/>
+                  <circle cx="405" cy="76" r="1.1" class="ahu-valve-detail"/><circle cx="405" cy="88" r="1.1" class="ahu-valve-detail"/>
+                  <circle cx="445" cy="76" r="1.1" class="ahu-valve-detail"/><circle cx="445" cy="88" r="1.1" class="ahu-valve-detail"/>
+                  <ellipse cx="425" cy="82" rx="5" ry="3" class="ahu-valve-detail"/>
                 </g>
                 <g id="ahuWaterFlow" class="water-flow">
                   <circle cx="355" cy="82" r="3.5"/><circle cx="377" cy="82" r="3.5"/><circle cx="440" cy="82" r="3.5"/><circle cx="461" cy="82" r="3.5"/>
+                </g>
+
+                <!-- Heating-water circuit and valve -->
+                <path d="M490 82 H622 V116" class="ahu-water-pipe ahu-hot-pipe" marker-end="url(#ahuHotArrow)"/>
+                <path d="M622 258 V335 H545" class="ahu-water-pipe ahu-hot-pipe" marker-end="url(#ahuHotArrow)"/>
+                <text x="490" y="72" class="ahu-small">HW SUPPLY</text>
+                <text x="545" y="351" class="ahu-small">HW RETURN</text>
+                <g class="rd-card" id="rd_heatValve"><rect class="rd-box" x="535" y="10" width="80" height="26" rx="3"/><text class="rd-title" x="575.0" y="19.5" text-anchor="middle">HEATING VALVE</text><line class="rd-sep" x1="538" y1="22.5" x2="612" y2="22.5"/><text class="rd-label" x="539" y="32">Position</text><text id="ahuHeatingValveCmd" class="rd-val" x="611" y="32" text-anchor="end">--</text></g>
+                <g id="ahuHeatingValve" class="ahu-control-valve">
+                  <line id="ahuHeatingValveStem" x1="575" y1="64" x2="575" y2="72" class="ahu-valve-stem"/>
+                  <rect x="560" y="48" width="30" height="16" rx="4" class="ahu-valve-actuator"/>
+                  <rect x="554" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
+                  <rect x="590" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
+                  <rect x="565" y="51" width="14" height="8" rx="2" class="ahu-valve-window"/>
+                  <circle cx="584" cy="55" r="2" class="ahu-valve-detail"/>
+                  <rect x="568" y="69" width="14" height="8" rx="2" class="ahu-valve-body"/>
+                  <rect x="557" y="75" width="36" height="14" rx="4" class="ahu-valve-body"/>
+                  <rect x="552" y="72" width="6" height="20" rx="1.5" class="ahu-valve-flange"/>
+                  <rect x="592" y="72" width="6" height="20" rx="1.5" class="ahu-valve-flange"/>
+                  <circle cx="555" cy="76" r="1.1" class="ahu-valve-detail"/><circle cx="555" cy="88" r="1.1" class="ahu-valve-detail"/>
+                  <circle cx="595" cy="76" r="1.1" class="ahu-valve-detail"/><circle cx="595" cy="88" r="1.1" class="ahu-valve-detail"/>
+                  <ellipse cx="575" cy="82" rx="5" ry="3" class="ahu-valve-detail"/>
+                </g>
+                <g id="ahuHotFlow" class="water-flow hot-flow">
+                  <circle cx="500" cy="82" r="3.5"/><circle cx="522" cy="82" r="3.5"/><circle cx="600" cy="82" r="3.5"/><circle cx="621" cy="82" r="3.5"/>
                 </g>
 
                 <!-- Supply fan -->
@@ -420,32 +446,39 @@
                   <circle r="13" fill="url(#ahuChromeHubGrad)" stroke="#475569" stroke-width="1.5"/>
                   <circle r="4.5" fill="#1e293b"/>
                 </g>
-                <text x="738" y="279" class="ahu-label">SUPPLY FAN</text>
-                <text x="715" y="293" class="ahu-small">ON / OFF + VFD SPEED</text>
 
                 <!-- Supply filter, duct, damper and directional arrows -->
                 <g class="ahu-filter-stage">
                   <rect x="900" y="104" width="66" height="149" rx="4" fill="#e6ebee" stroke="#56646d" stroke-width="2"/>
                   <path d="M909 113 L957 134 L909 155 L957 176 L909 197 L957 218 L909 239" fill="none" stroke="#7b878f" stroke-width="3"/>
                   <path d="M917 111 V246 M929 111 V246 M941 111 V246 M953 111 V246" stroke="#aab4ba" stroke-width="1.5" opacity=".65"/>
-                  <text x="900" y="279" class="ahu-label">SUPPLY FILTER</text>
-                  <text x="902" y="293" class="ahu-small">AIR CLEANING</text>
-                  <text id="ahuSupplyFilter" x="933" y="307" class="ahu-small" text-anchor="middle">NORMAL</text>
                 </g>
-                <!-- Supply Damper frame -->
-                <rect class="ahu-damper-frame" x="983" y="86" width="76" height="181" rx="2"/>
-                <!-- Supply Damper blades — full duct height, 5 blades across the opening -->
-                <g id="ahuDamper" class="ahu-damper-group">
-                  <line x1="992" y1="86" x2="992" y2="267"/>
-                  <line x1="1007" y1="86" x2="1007" y2="267"/>
-                  <line x1="1022" y1="86" x2="1022" y2="267"/>
-                  <line x1="1037" y1="86" x2="1037" y2="267"/>
-                  <line x1="1052" y1="86" x2="1052" y2="267"/>
-                </g>
+                <!-- Supply Damper: dedicated fixed housing, individually pivoting blades -->
+                <rect class="ahu-damper-frame" x="984" y="88" width="72" height="177" rx="2"/>
+                <rect class="ahu-damper-backplate" x="992" y="92" width="56" height="169"/>
+                <g id="ahuDamper" class="ahu-damper-group"><rect class="ahu-damper-blade" data-pitch="14.00" x="992.00" y="92" width="14.00" height="169"/><rect class="ahu-damper-blade" data-pitch="14.00" x="1006.00" y="92" width="14.00" height="169"/><rect class="ahu-damper-blade" data-pitch="14.00" x="1020.00" y="92" width="14.00" height="169"/><rect class="ahu-damper-blade" data-pitch="14.00" x="1034.00" y="92" width="14.00" height="169"/></g>
+                <g class="ahu-damper-pins"><circle cx="999.00" cy="90" r="2.1"/><circle cx="999.00" cy="263" r="2.1"/><circle cx="1013.00" cy="90" r="2.1"/><circle cx="1013.00" cy="263" r="2.1"/><circle cx="1027.00" cy="90" r="2.1"/><circle cx="1027.00" cy="263" r="2.1"/><circle cx="1041.00" cy="90" r="2.1"/><circle cx="1041.00" cy="263" r="2.1"/></g>
                 <text x="975" y="74" class="ahu-small">SUPPLY DAMPER 0–100%</text>
                 <path d="M235 178 H265 M338 178 H355 M493 178 H510 M640 178 H660 M645 171 H660 M645 185 H660 M880 178 H900 M900 178 H966 M966 178 H1000 M1000 178 H1062 M1062 178 H1135" class="ahu-flow-arrow" marker-end="url(#ahuAirArrow)"/>
                 <g id="ahuAirflowDots" class="airflow-streams" clip-path="url(#ahuAirDuctClip)"></g>
                 <text x="1070" y="158" class="ahu-label">SUPPLY AIR</text>
+
+
+                <!-- Equipment readings (live, placed beside each station) -->
+                <g id="ahuReadings">
+                  <g class="rd-card" id="rd_oa"><rect class="rd-box" x="8" y="34" width="92" height="46" rx="3"/><text class="rd-title" x="54.0" y="43.5" text-anchor="middle">OUTDOOR AIR</text><line class="rd-sep" x1="11" y1="46.5" x2="97" y2="46.5"/><text class="rd-label" x="12" y="56">Temp</text><text id="rdOaTemp" class="rd-val" x="96" y="56" text-anchor="end">--</text><text class="rd-label" x="12" y="66">RH</text><text id="rdOaRh" class="rd-val" x="96" y="66" text-anchor="end">--</text><text class="rd-label" x="12" y="76">Flow</text><text id="rdOaFlow" class="rd-val" x="96" y="76" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_vavoa"><rect class="rd-box" x="12" y="150" width="96" height="36" rx="3"/><text class="rd-title" x="60.0" y="159.5" text-anchor="middle">VAV DAMPER (OA)</text><line class="rd-sep" x1="15" y1="162.5" x2="105" y2="162.5"/><text class="rd-label" x="16" y="172">Position</text><text id="rdVavOaPos" class="rd-val" x="104" y="172" text-anchor="end">--</text><text class="rd-label" x="16" y="182">Flow</text><text id="rdVavOaFlow" class="rd-val" x="104" y="182" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_ra"><rect class="rd-box" x="8" y="292" width="92" height="46" rx="3"/><text class="rd-title" x="54.0" y="301.5" text-anchor="middle">RETURN AIR</text><line class="rd-sep" x1="11" y1="304.5" x2="97" y2="304.5"/><text class="rd-label" x="12" y="314">Temp</text><text id="rdRaTemp" class="rd-val" x="96" y="314" text-anchor="end">--</text><text class="rd-label" x="12" y="324">RH</text><text id="rdRaRh" class="rd-val" x="96" y="324" text-anchor="end">--</text><text class="rd-label" x="12" y="334">Flow</text><text id="rdRaFlow" class="rd-val" x="96" y="334" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_vavra"><rect class="rd-box" x="104" y="292" width="84" height="36" rx="3"/><text class="rd-title" x="146.0" y="301.5" text-anchor="middle">VAV DAMPER (RA)</text><line class="rd-sep" x1="107" y1="304.5" x2="185" y2="304.5"/><text class="rd-label" x="108" y="314">Position</text><text id="rdVavRaPos" class="rd-val" x="184" y="314" text-anchor="end">--</text><text class="rd-label" x="108" y="324">Flow</text><text id="rdVavRaFlow" class="rd-val" x="184" y="324" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_mix"><rect class="rd-box" x="190" y="276" width="78" height="46" rx="3"/><text class="rd-title" x="229.0" y="285.5" text-anchor="middle">MIXING</text><line class="rd-sep" x1="193" y1="288.5" x2="265" y2="288.5"/><text class="rd-label" x="194" y="298">Mixed Temp</text><text id="rdMixTemp" class="rd-val" x="264" y="298" text-anchor="end">--</text><text class="rd-label" x="194" y="308">Mixed RH</text><text id="rdMixRh" class="rd-val" x="264" y="308" text-anchor="end">--</text><text class="rd-label" x="194" y="318">Total Flow</text><text id="rdMixFlow" class="rd-val" x="264" y="318" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_filter"><rect class="rd-box" x="272" y="276" width="66" height="36" rx="3"/><text class="rd-title" x="305.0" y="285.5" text-anchor="middle">FILTER (PRE)</text><line class="rd-sep" x1="275" y1="288.5" x2="335" y2="288.5"/><text class="rd-label" x="276" y="298">Pre DP</text><text id="rdFilterDp" class="rd-val" x="334" y="298" text-anchor="end">--</text><text class="rd-label" x="276" y="308">Status</text><text id="rdFilterSts" class="rd-val" x="334" y="308" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_cool"><rect class="rd-box" x="366" y="276" width="104" height="46" rx="3"/><text class="rd-title" x="418.0" y="285.5" text-anchor="middle">COOLING COIL</text><line class="rd-sep" x1="369" y1="288.5" x2="467" y2="288.5"/><text class="rd-label" x="370" y="298">Inlet Temp</text><text id="rdCoolIn" class="rd-val" x="466" y="298" text-anchor="end">--</text><text class="rd-label" x="370" y="308">Outlet Temp</text><text id="rdCoolOut" class="rd-val" x="466" y="308" text-anchor="end">--</text><text class="rd-label" x="370" y="318">Valve Pos</text><text id="rdCoolVlv" class="rd-val" x="466" y="318" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_heat"><rect class="rd-box" x="520" y="276" width="104" height="46" rx="3"/><text class="rd-title" x="572.0" y="285.5" text-anchor="middle">HEATING COIL</text><line class="rd-sep" x1="523" y1="288.5" x2="621" y2="288.5"/><text class="rd-label" x="524" y="298">Inlet Temp</text><text id="rdHeatIn" class="rd-val" x="620" y="298" text-anchor="end">--</text><text class="rd-label" x="524" y="308">Outlet Temp</text><text id="rdHeatOut" class="rd-val" x="620" y="308" text-anchor="end">--</text><text class="rd-label" x="524" y="318">Valve Pos</text><text id="rdHeatVlv" class="rd-val" x="620" y="318" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_fan"><rect class="rd-box" x="705" y="276" width="130" height="56" rx="3"/><text class="rd-title" x="770.0" y="285.5" text-anchor="middle">SUPPLY FAN</text><line class="rd-sep" x1="708" y1="288.5" x2="832" y2="288.5"/><text class="rd-label" x="709" y="298">Status</text><text id="rdFanSts" class="rd-val" x="831" y="298" text-anchor="end">--</text><text class="rd-label" x="709" y="308">VFD Speed</text><text id="rdFanHz" class="rd-val" x="831" y="308" text-anchor="end">--</text><text class="rd-label" x="709" y="318">Fan RPM</text><text id="rdFanRpm" class="rd-val" x="831" y="318" text-anchor="end">--</text><text class="rd-label" x="709" y="328">Airflow</text><text id="rdFanCfm" class="rd-val" x="831" y="328" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_sfilter"><rect class="rd-box" x="898" y="276" width="72" height="36" rx="3"/><text class="rd-title" x="934.0" y="285.5" text-anchor="middle">SUPPLY FILTER</text><line class="rd-sep" x1="901" y1="288.5" x2="967" y2="288.5"/><text class="rd-label" x="902" y="298">Pre DP</text><text id="rdSFilterDp" class="rd-val" x="966" y="298" text-anchor="end">--</text><text class="rd-label" x="902" y="308">Status</text><text id="rdSFilterSts" class="rd-val" x="966" y="308" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_damper"><rect class="rd-box" x="976" y="276" width="88" height="36" rx="3"/><text class="rd-title" x="1020.0" y="285.5" text-anchor="middle">SUPPLY DAMPER</text><line class="rd-sep" x1="979" y1="288.5" x2="1061" y2="288.5"/><text class="rd-label" x="980" y="298">Position</text><text id="rdDamperPos" class="rd-val" x="1060" y="298" text-anchor="end">--</text><text class="rd-label" x="980" y="308">Flow</text><text id="rdDamperFlow" class="rd-val" x="1060" y="308" text-anchor="end">--</text></g>
+                  <g class="rd-card" id="rd_supply"><rect class="rd-box" x="1076" y="276" width="98" height="56" rx="3"/><text class="rd-title" x="1125.0" y="285.5" text-anchor="middle">SUPPLY AIR</text><line class="rd-sep" x1="1079" y1="288.5" x2="1171" y2="288.5"/><text class="rd-label" x="1080" y="298">Temp</text><text id="rdSaTemp" class="rd-val" x="1170" y="298" text-anchor="end">--</text><text class="rd-label" x="1080" y="308">RH</text><text id="rdSaRh" class="rd-val" x="1170" y="308" text-anchor="end">--</text><text class="rd-label" x="1080" y="318">Static P</text><text id="rdSaStatic" class="rd-val" x="1170" y="318" text-anchor="end">--</text><text class="rd-label" x="1080" y="328">Flow</text><text id="rdSaFlow" class="rd-val" x="1170" y="328" text-anchor="end">--</text></g>
+                </g>
 
                 <!-- VFD -->
                 <g class="vfd-block" filter="url(#ahuShadow2)">
@@ -721,9 +754,9 @@
 
 </main>
 
-<script src="{% static 'refrigerator/js/simulation.js' %}?v=2.4"></script>
+<script src="{% static 'refrigerator/js/simulation.js' %}?v=2.5"></script>
 <script src="{% static 'refrigerator/js/history.js' %}?v=2.3"></script>
-<script src="{% static 'refrigerator/js/ui.js' %}?v=3.1"></script>
+<script src="{% static 'refrigerator/js/ui.js' %}?v=3.3"></script>
 <script src="{% static 'refrigerator/js/app.js' %}?v=2.3"></script>
 </body>
 </html>

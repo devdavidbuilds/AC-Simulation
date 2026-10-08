@@ -654,8 +654,11 @@ button.btn-stop:hover { background: #a52a1d; }
 .ahu-duct.return { stroke:#87939a; }
 .ahu-duct.supply { stroke:#7d8990; }
 .ahu-damper-group { transform-box:fill-box; transform-origin:center; transition:transform .35s cubic-bezier(.22,.61,.36,1); }
-.ahu-damper-group line { stroke:#3a6a8c; stroke-width:6; stroke-linecap:round; }
-.ahu-damper-frame { fill:none; stroke:#2a4f6e; stroke-width:2.5; }
+.ahu-damper-frame { fill:#3b4f63; stroke:#26384a; stroke-width:2; }
+.ahu-damper-backplate { fill:#0f2233; stroke:#26384a; stroke-width:.6; }
+.ahu-damper-group { transition:none; }
+.ahu-damper-blade { fill:url(#ahuDamperBladeGrad); stroke:#1b4a70; stroke-width:.5; transform-box:fill-box; transform-origin:center; transform:scaleX(1); transition:transform .35s cubic-bezier(.22,.61,.36,1); }
+.ahu-damper-pins circle { fill:#1f2d3b; stroke:#9fb3c4; stroke-width:.6; }
 .water-flow { fill:#35aee9; filter:drop-shadow(0 0 4px #35aee988); }
 .water-flow circle { animation:ahuWaterPulse .85s linear infinite; }
 .water-flow circle:nth-child(2){animation-delay:-.21s}.water-flow circle:nth-child(3){animation-delay:-.42s}.water-flow circle:nth-child(4){animation-delay:-.63s}
@@ -696,9 +699,9 @@ button.btn-stop:hover { background: #a52a1d; }
 .ahu-fan-rotor.active { animation:ahuFanSpin var(--fan-speed,.45s) linear infinite; }
 .ahu-fan-rotor:not(.active) { opacity:.55; }
 @keyframes ahuFanSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
-.ahu-valve-actuator { fill:#d6b65f; stroke:#8b6d2f; stroke-width:1; }
+.ahu-valve-actuator { fill:url(#ahuValveGold); stroke:#8b6d2f; stroke-width:1; }
 .ahu-valve-stem { stroke:#9b7b32; stroke-width:1.5; }
-.ahu-valve-body { fill:#c7a24b; stroke:#785d23; stroke-width:1.2; }
+.ahu-valve-body { fill:url(#ahuValveGold); stroke:#785d23; stroke-width:1.2; }
 .ahu-valve-detail { fill:#f4e2a5; stroke:#82692f; stroke-width:.8; }
 .ahu-control-valve { transition:filter .25s ease; }
 .ahu-control-valve.active { filter:drop-shadow(0 0 5px rgba(190,151,52,.36)); }
@@ -777,3 +780,82 @@ button.btn-stop:hover { background: #a52a1d; }
 }
 
 
+
+.ahu-valve-window { fill:#c9d4db; stroke:#7a8790; stroke-width:.8; }
+.ahu-valve-flange { fill:#b88a28; stroke:#785d23; stroke-width:1; }
+.ahu-valve-title { font-weight:800; letter-spacing:.04em; }
+.ahu-hot-pipe { stroke:#e0662c; }
+.hot-flow { fill:#ff8a4c; filter:drop-shadow(0 0 4px #ff6a2a88); }
+
+/* Equipment reading cards (SVG) */
+.rd-box { fill:#0e1d29; stroke:#35607f; stroke-width:1; }
+.rd-title { font:800 7.5px var(--font-mono, monospace); fill:#e8f1f6; letter-spacing:.03em; }
+.rd-sep { stroke:#35607f; stroke-width:.6; }
+.rd-label { font:600 6.6px var(--font-mono, monospace); fill:#9db3c2; }
+.rd-val { font:800 7.2px var(--font-mono, monospace); fill:#4cff7a; }
+.rd-val.warn { fill:#ff5a4d; }
+.rd-card.warn .rd-box { stroke:#ff5a4d; stroke-width:1.4; }
+.ahu-alert-bar { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:7px 12px; background:#fdecea; border-bottom:2px solid #d93025; color:#a31510; font:700 12px var(--font-mono, monospace); animation:ahuAlertPulse 1.2s ease-in-out infinite; }
+.ahu-alert-bar[hidden] { display:none; }
+.ahu-alert-bar .alert-tag { background:#d93025; color:#fff; padding:2px 7px; border-radius:3px; letter-spacing:.06em; }
+@keyframes ahuAlertPulse { 50% { background:#f9d0cc; } }
+
+/* Refrigeration mimic: adjustable control cards beside components */
+#machineSvg foreignObject { overflow: visible; }
+#machineSvg .inline-ctrl-card { width: 100%; height: 100%; overflow: hidden; box-sizing: border-box; }
+.inline-ctrl-vfd::before { background: #6b7280; }
+.inline-ctrl-live { margin: 3px 0 0; padding-top: 3px; border-top: 1px solid #e0e4e7; }
+.inline-ctrl-live strong { color: #1a5276; }
+#machineSvg .inline-ctrl-card .actuator-slider { accent-color: #247aa8; }
+
+/* Refrigeration health: component colour + alerts */
+.component { transition: filter 0.6s ease; }
+.component.state-running, .component.state-hot, .component.state-cooling { filter: drop-shadow(0 0 5px rgba(46,160,90,0.45)); }
+.component.health-warn { filter: drop-shadow(0 0 7px rgba(240,160,20,0.95)) sepia(0.35) saturate(1.4); }
+.component.health-alarm { filter: drop-shadow(0 0 9px rgba(217,48,37,1)) sepia(0.5) hue-rotate(-30deg) saturate(2); animation: rfAlarmPulse 1s ease-in-out infinite; }
+.component.health-warn .comp-indicator { fill: #f0a014; }
+.component.health-alarm .comp-indicator { fill: #d93025; }
+@keyframes rfAlarmPulse { 50% { opacity: 0.72; } }
+.sensor-readout.health-warn { fill: #d98200; }
+.sensor-readout.health-alarm { fill: #d93025; }
+.param-box.health-warn { border-color: #f0a014; background: #fff4de; }
+.param-box.health-warn .param-value { color: #b96f00; }
+.param-box.health-alarm { border-color: #d93025; background: #fdecea; }
+.param-box.health-alarm .param-value { color: #d93025; }
+.inline-ctrl-card.health-warn { border-color: #f0a014; box-shadow: 0 0 6px rgba(240,160,20,0.7); }
+.inline-ctrl-card.health-alarm { border-color: #d93025; box-shadow: 0 0 8px rgba(217,48,37,0.8); }
+.inline-ctrl-card.health-warn .inline-ctrl-live strong { color: #b96f00; }
+.inline-ctrl-card.health-alarm .inline-ctrl-live strong { color: #d93025; }
+.ahu-alert-bar .lvl-warn { color: #8a5200; }
+
+/* AHU-style equipment reading cards on the refrigeration mimic */
+.mimic-svg-wrap svg .rf-box { fill:#0e1d29; stroke:#35607f; stroke-width:1.2; }
+.mimic-svg-wrap svg .rf-title { font:800 10.5px var(--font-mono, monospace); fill:#e8f1f6; letter-spacing:.05em; }
+.mimic-svg-wrap svg .rf-sep { stroke:#35607f; stroke-width:.8; }
+.mimic-svg-wrap svg .rf-label { font:600 10px var(--font-mono, monospace); fill:#9db3c2; }
+.mimic-svg-wrap svg .rf-val { font:800 12px var(--font-mono, monospace); fill:#4cff7a; }
+.mimic-svg-wrap svg .rf-val.health-warn { fill:#ffb020; }
+.mimic-svg-wrap svg .rf-val.health-alarm { fill:#ff5a4d; }
+.mimic-svg-wrap svg .rf-card.health-warn .rf-box { stroke:#ffb020; stroke-width:2; }
+.mimic-svg-wrap svg .rf-card.health-alarm .rf-box { stroke:#ff5a4d; stroke-width:2.4; }
+#machineSvg .inline-ctrl-card { padding:4px 8px; }
+#machineSvg .inline-ctrl-title { font-size:10px; margin-bottom:3px; }
+#machineSvg .inline-ctrl-readout span { font-size:9px; }
+#machineSvg .inline-ctrl-readout strong { font-size:12px; }
+
+.flow-arrow-dot { stroke: #ffffff; stroke-width: 0.8; stroke-linejoin: round; filter: drop-shadow(0 0 2px rgba(0,0,0,0.35)); }
+.component .fan-rotor { animation-duration: var(--fan-dur, 0.45s) !important; }
+.component.fan-stopped .fan-rotor { animation: none !important; }
+
+.air-arrow { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+
+/* HP / LP direction arrows: small pulsing motion along their direction while running */
+.flow-arrows.flowing .flow-arrow { animation: flowNudge 1s ease-out infinite; }
+@keyframes flowNudge {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)); opacity: 0; }
+}
+
+.status-lamp.alarm { background: #d93025; box-shadow: 0 0 7px 2px rgba(217,48,37,0.7); animation: rfAlarmPulse 0.8s ease-in-out infinite; }

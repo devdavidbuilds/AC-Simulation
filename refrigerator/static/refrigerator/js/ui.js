@@ -27,13 +27,17 @@
       "eventLog",
       "svgDischargePressure", "svgDischargeTemp", "svgSuctionPressure",
       "svgCondenserOutletTemp", "svgEvaporatorInletTemp", "svgEvaporatorOutletTemp",
+      "svgCondenserInletTemp", "svgCapInletTemp", "svgEvapCoilInTemp",
+      "svgCompSpeed", "svgCondFanSpeed", "svgCapOpening", "svgEvapFanSpeed",
+      "lampFault", "valFault", "valCycle",
+      "rfcard_comp", "rfcard_cond", "rfcard_cap", "rfcard_evap",
       "compressor", "compressorMotor", "condenser", "evaporator", "capillaryTube",
       "condShimmer1", "evapShimmer1", "capillaryGlow",
       "refrigerantFlow",
       "actFanStatus", "actVfdLed",
       "ahuReturnTemp", "ahuValveCmd", "ahuValveStatus", "ahuCfm", "ahuSupplyTemp", "ahuStaticPressure",
       "ahuSupplyTemp2", "ahuVfdHz2", "ahuSupplyFilter",
-      "ahuValveCmd2", "ahuFilterLed", "ahuCoolingValve", "ahuValveStem", "ahuWaterFlow", "ahuCoilGlow", "ahuCoolingCoil", "ahuHeatingCoil", "ahuHeatingCoilGlow",
+      "ahuValveCmd2", "ahuHeatingValveCmd", "ahuHeatingValve", "ahuHeatingValveStem", "ahuHotFlow", "ahuFilterLed", "ahuCoolingValve", "ahuValveStem", "ahuWaterFlow", "ahuCoilGlow", "ahuCoolingCoil", "ahuHeatingCoil", "ahuHeatingCoilGlow",
       "ahuFanRotor", "ahuDamper", "ahuVavOutdoor", "ahuVavReturn", "ahuAirflowDots",
       "inlineValvePct", "inlineHeatingValvePct", "inlineDamperPct", "inlineVavPct", "inlineVfdHz", "inlineSetTemp", "inlineFanStatus"
     ].forEach((id) => (el[id] = document.getElementById(id)));
@@ -49,57 +53,206 @@
     groupEl.classList.add(stateClass);
   }
 
-  const damperBladeGeometry = new WeakMap();
+  // Vertical louver slats (front view): 0% = slats side by side and touching (closed), 100% = slats edge-on (open); they open/close left-to-right.
+  const DAMPER_EDGE_THICKNESS = 2.2;
   function setDamperPosition(groupEl, percentage) {
     if (!groupEl) return;
-    const angle = -Math.PI * Math.max(0, Math.min(100, percentage)) / 200;
-    groupEl.querySelectorAll("line").forEach((line) => {
-      let geometry = damperBladeGeometry.get(line);
-      if (!geometry) {
-        geometry = {
-          centerX: (Number(line.getAttribute("x1")) + Number(line.getAttribute("x2"))) / 2,
-          centerY: (Number(line.getAttribute("y1")) + Number(line.getAttribute("y2"))) / 2,
-          halfLength: Math.hypot(
-            Number(line.getAttribute("x2")) - Number(line.getAttribute("x1")),
-            Number(line.getAttribute("y2")) - Number(line.getAttribute("y1"))
-          ) / 2
-        };
-        damperBladeGeometry.set(line, geometry);
-      }
-      const halfX = -Math.sin(angle) * geometry.halfLength;
-      const halfY = Math.cos(angle) * geometry.halfLength;
-      const target = [
-        geometry.centerX - halfX,
-        geometry.centerY - halfY,
-        geometry.centerX + halfX,
-        geometry.centerY + halfY
-      ].map((value) => value.toFixed(2));
-      if (geometry.target && target.every((value, index) => value === geometry.target[index])) return;
-      if (geometry.frameId) cancelAnimationFrame(geometry.frameId);
-
-      const start = ["x1", "y1", "x2", "y2"].map((attribute) => Number(line.getAttribute(attribute)));
-      geometry.target = target;
-      if (start.every((value, index) => Math.abs(value - Number(target[index])) < 0.01)) {
-        target.forEach((value, index) => line.setAttribute(["x1", "y1", "x2", "y2"][index], value));
-        geometry.frameId = null;
-        return;
-      }
-
-      const startTime = performance.now();
-      function animateDamper(now) {
-        const progress = Math.min(1, (now - startTime) / 350);
-        const eased = progress * progress * (3 - 2 * progress);
-        const current = start.map((value, index) => value + (Number(target[index]) - value) * eased);
-        current.forEach((value, index) => line.setAttribute(["x1", "y1", "x2", "y2"][index], value.toFixed(2)));
-        if (progress < 1) {
-          geometry.frameId = requestAnimationFrame(animateDamper);
-        } else {
-          target.forEach((value, index) => line.setAttribute(["x1", "y1", "x2", "y2"][index], value));
-          geometry.frameId = null;
-        }
-      }
-      geometry.frameId = requestAnimationFrame(animateDamper);
+    const open = Math.max(0, Math.min(100, percentage)) / 100;
+    groupEl.querySelectorAll(".ahu-damper-blade").forEach((blade) => {
+      const pitch = Number(blade.dataset.pitch) || 20;
+      const scale = 1 - open * (1 - DAMPER_EDGE_THICKNESS / pitch);
+      blade.style.transform = "scaleX(" + scale.toFixed(3) + ")";
     });
+  }
+
+  // ---- Equipment reading cards + threshold alerts ----
+  const OUTDOOR_TEMP = 32.5, OUTDOOR_RH = 62, RETURN_RH = 55, OA_FRACTION = 0.4;
+  const THRESHOLDS = {
+    returnTempHigh: 28, filterDpHigh: 80, sFilterDpHigh: 85, coilOutLow: 12,
+    heatOutHigh: 35, supplyTempHigh: 26, supplyTempLow: 14, staticHigh: 450, vfdHigh: 55
+  };
+  const rdCache = {};
+  function rd(id) { return rdCache[id] || (rdCache[id] = document.getElementById(id)); }
+  function setRd(id, text, warn) {
+    const node = rd(id);
+    if (!node) return;
+    node.textContent = text;
+    node.classList.toggle("warn", !!warn);
+  }
+  function flagCard(id, warn) {
+    const node = rd(id);
+    if (node) node.classList.toggle("warn", !!warn);
+  }
+  function updateAhuReadings(s) {
+    const fanOn = !!s.fanOn;
+    const vfd = Math.max(0, Math.min(60, Number(s.vfdFrequency) || 0));
+    const vavF = Math.max(0, Math.min(100, s.vavPosition)) / 100;
+    const upstream = s.upstreamCfm !== undefined ? s.upstreamCfm : (fanOn ? 1800 * vfd / 60 * vavF : 0);
+    const supplyFlow = Math.round(s.airflowCfm);
+    const oaFlow = Math.round(upstream * OA_FRACTION);
+    const raFlow = Math.round(upstream * (1 - OA_FRACTION));
+    const mixT = s.mixedAirTemp !== undefined ? s.mixedAirTemp : OA_FRACTION * OUTDOOR_TEMP + (1 - OA_FRACTION) * s.returnAirTemperature;
+    const coolOut = s.coolingOutTemp !== undefined ? s.coolingOutTemp : mixT;
+    const heatOut = s.heatingOutTemp !== undefined ? s.heatingOutTemp : coolOut;
+    const mixRh = OA_FRACTION * OUTDOOR_RH + (1 - OA_FRACTION) * RETURN_RH;
+    const coolDrop = mixT - coolOut, heatRise = heatOut - coolOut;
+    const supplyRh = Math.max(20, mixRh - 0.35 * coolDrop - 0.4 * Math.max(0, heatRise));
+    const dp = 85 * Math.pow(upstream / 1800, 2);
+    const sdp = 90 * Math.pow(upstream / 1800, 2);
+    const valve = Math.round(s.valveOpening), hv = Math.round(s.heatingValveCommand);
+    const damper = Math.round(s.damperPosition), vav = Math.round(s.vavPosition);
+    const t1 = (v) => v.toFixed(1) + " °C";
+
+    const alerts = [];
+    const warnReturn = s.returnAirTemperature > THRESHOLDS.returnTempHigh;
+    const warnFilter = dp > THRESHOLDS.filterDpHigh;
+    const warnSFilter = sdp > THRESHOLDS.sFilterDpHigh;
+    const coolActive = fanOn && upstream > 1;
+    const warnCoolOut = coolActive && coolOut < THRESHOLDS.coilOutLow;
+    const warnHeatOut = coolActive && heatOut > THRESHOLDS.heatOutHigh;
+    const warnSupT = coolActive && (s.supplyAirTemperature > THRESHOLDS.supplyTempHigh || s.supplyAirTemperature < THRESHOLDS.supplyTempLow);
+    const warnStatic = s.supplyStaticPressure > THRESHOLDS.staticHigh;
+    const warnVfd = vfd > THRESHOLDS.vfdHigh;
+    const warnSimul = coolActive && valve > 60 && hv > 60;
+    if (warnReturn) alerts.push("RETURN AIR TEMP HIGH (" + s.returnAirTemperature.toFixed(1) + " °C > " + THRESHOLDS.returnTempHigh + " °C)");
+    if (warnFilter) alerts.push("PRE-FILTER DP HIGH (" + Math.round(dp) + " Pa > " + THRESHOLDS.filterDpHigh + " Pa)");
+    if (warnSFilter) alerts.push("SUPPLY FILTER DP HIGH (" + Math.round(sdp) + " Pa > " + THRESHOLDS.sFilterDpHigh + " Pa)");
+    if (warnCoolOut) alerts.push("COOLING COIL OUTLET TEMP LOW (" + coolOut.toFixed(1) + " °C < " + THRESHOLDS.coilOutLow + " °C) - FREEZE RISK");
+    if (warnHeatOut) alerts.push("HEATING COIL OUTLET TEMP HIGH (" + heatOut.toFixed(1) + " °C > " + THRESHOLDS.heatOutHigh + " °C)");
+    if (warnSupT) alerts.push("SUPPLY AIR TEMP OUT OF RANGE (" + s.supplyAirTemperature.toFixed(1) + " °C, limits " + THRESHOLDS.supplyTempLow + "-" + THRESHOLDS.supplyTempHigh + " °C)");
+    if (warnStatic) alerts.push("SUPPLY STATIC PRESSURE HIGH (" + Math.round(s.supplyStaticPressure) + " Pa > " + THRESHOLDS.staticHigh + " Pa)");
+    if (warnVfd) alerts.push("VFD SPEED HIGH (" + vfd.toFixed(1) + " Hz > " + THRESHOLDS.vfdHigh + " Hz)");
+    if (warnSimul) alerts.push("SIMULTANEOUS COOLING AND HEATING (both valves > 60 %)");
+
+    setRd("rdOaTemp", t1(OUTDOOR_TEMP)); setRd("rdOaRh", OUTDOOR_RH + " %"); setRd("rdOaFlow", oaFlow + " CFM");
+    setRd("rdVavOaPos", vav + " %"); setRd("rdVavOaFlow", oaFlow + " CFM");
+    setRd("rdRaTemp", t1(s.returnAirTemperature), warnReturn); setRd("rdRaRh", RETURN_RH + " %"); setRd("rdRaFlow", raFlow + " CFM");
+    setRd("rdVavRaPos", vav + " %"); setRd("rdVavRaFlow", raFlow + " CFM");
+    setRd("rdMixTemp", t1(mixT)); setRd("rdMixRh", mixRh.toFixed(0) + " %"); setRd("rdMixFlow", Math.round(upstream) + " CFM");
+    setRd("rdFilterDp", Math.round(dp) + " Pa", warnFilter); setRd("rdFilterSts", warnFilter ? "ALARM" : "NORMAL", warnFilter);
+    setRd("rdCoolIn", t1(mixT)); setRd("rdCoolOut", t1(coolOut), warnCoolOut); setRd("rdCoolVlv", valve + " %");
+    setRd("rdHeatIn", t1(coolOut)); setRd("rdHeatOut", t1(heatOut), warnHeatOut); setRd("rdHeatVlv", hv + " %", warnSimul);
+    setRd("rdFanSts", fanOn ? "ON" : "OFF"); setRd("rdFanHz", vfd.toFixed(0) + " Hz", warnVfd);
+    setRd("rdFanRpm", (fanOn ? Math.round(vfd * 21.25) : 0) + " RPM"); setRd("rdFanCfm", Math.round(upstream) + " CFM");
+    setRd("rdSFilterDp", Math.round(sdp) + " Pa", warnSFilter); setRd("rdSFilterSts", warnSFilter ? "ALARM" : "NORMAL", warnSFilter);
+    setRd("rdDamperPos", damper + " %"); setRd("rdDamperFlow", supplyFlow + " CFM");
+    setRd("rdSaTemp", t1(s.supplyAirTemperature), warnSupT); setRd("rdSaRh", supplyRh.toFixed(0) + " %");
+    setRd("rdSaStatic", Math.round(s.supplyStaticPressure) + " Pa", warnStatic); setRd("rdSaFlow", supplyFlow + " CFM");
+
+    flagCard("rd_ra", warnReturn); flagCard("rd_filter", warnFilter); flagCard("rd_sfilter", warnSFilter);
+    flagCard("rd_cool", warnCoolOut); flagCard("rd_heat", warnHeatOut || warnSimul); flagCard("rd_fan", warnVfd);
+    flagCard("rd_supply", warnSupT || warnStatic);
+    flagCard("rd_coolValve", warnSimul); flagCard("rd_heatValve", warnSimul);
+
+    const bar = document.getElementById("ahuAlertBar");
+    if (bar) {
+      bar.hidden = alerts.length === 0;
+      const html = alerts.length ? '<span class="alert-tag">ALERT</span>' + alerts.map((a) => "<span>&#9888; " + a + "</span>").join("") : "";
+      if (bar.dataset.sig !== html) { bar.innerHTML = html; bar.dataset.sig = html; }
+    }
+  }
+
+  // ---- Refrigeration health: component colours + alerts (like the AHU alert bar) ----
+  const RF_LIMITS = {
+    dischargeP:  { warn: 11.5, alarm: 13,  high: true,  label: "DISCHARGE PRESSURE HIGH", unit: " bar" },
+    suctionP:    { warn: 1.1,  alarm: 0.9, high: false, label: "SUCTION PRESSURE LOW", unit: " bar" },
+    dischargeT:  { warn: 92,   alarm: 100, high: true,  label: "DISCHARGE TEMP HIGH", unit: " °C" },
+    condOutT:    { warn: 46,   alarm: 52,  high: true,  label: "CONDENSER OUTLET TEMP HIGH (POOR HEAT REJECTION)", unit: " °C" },
+    superheatLo: { warn: 4,    alarm: 2,   high: false, label: "LOW SUPERHEAT - LIQUID FLOODBACK RISK", unit: " K" },
+    superheatHi: { warn: 12,   alarm: 15,  high: true,  label: "HIGH SUPERHEAT - EVAPORATOR STARVED", unit: " K" }
+  };
+  function rfLevel(key, v) {
+    const l = RF_LIMITS[key];
+    const beyond = (t) => (l.high ? v > t : v < t);
+    return beyond(l.alarm) ? 2 : (beyond(l.warn) ? 1 : 0);
+  }
+  function setHealth(node, lvl) {
+    if (!node) return;
+    node.classList.remove("health-warn", "health-alarm");
+    if (lvl === 1) node.classList.add("health-warn");
+    if (lvl === 2) node.classList.add("health-alarm");
+  }
+  function updateRefrigHealth(s, active) {
+    const L = { dP: 0, sP: 0, dT: 0, cT: 0, shLo: 0, shHi: 0 };
+    const alerts = [];
+    let compL = 0, condL = 0, capL = 0, evapL = 0;
+    const superheat = s.evaporatorOutletTemp - s.evaporatorInletTemp;
+
+    const settled = typeof s.runSeconds !== "number" || s.runSeconds >= 9;
+    if (active && s.systemStatus !== "STARTING" && settled) {
+      L.dP = rfLevel("dischargeP", s.dischargePressure);
+      L.sP = rfLevel("suctionP", s.suctionPressure);
+      L.dT = rfLevel("dischargeT", s.dischargeTemp);
+      L.cT = rfLevel("condOutT", s.condenserOutletTemp);
+      L.shLo = rfLevel("superheatLo", superheat);
+      L.shHi = rfLevel("superheatHi", superheat);
+      const add = (key, lvl, v) => {
+        if (lvl) alerts.push({ lvl: lvl, text: RF_LIMITS[key].label + " (" + v.toFixed(1) + RF_LIMITS[key].unit + ")" });
+      };
+      add("dischargeP", L.dP, s.dischargePressure);
+      add("suctionP", L.sP, s.suctionPressure);
+      add("dischargeT", L.dT, s.dischargeTemp);
+      add("condOutT", L.cT, s.condenserOutletTemp);
+      add("superheatLo", L.shLo, superheat);
+      add("superheatHi", L.shHi, superheat);
+
+      const F = s.isHistorical ? {} : (s.faults || {});
+      const FAULT_TEXT = {
+        compressor: "COMPRESSOR MALFUNCTION - MOTOR OVERLOAD / OVERHEATING",
+        condenser: "CONDENSER MALFUNCTION - FAN FAILURE, POOR HEAT REJECTION",
+        capillary: "CAPILLARY TUBE MALFUNCTION - BLOCKAGE / RESTRICTION",
+        evaporator: "EVAPORATOR MALFUNCTION - FAN FAILURE / COIL ICING"
+      };
+      Object.keys(FAULT_TEXT).forEach((k) => { if (F[k]) alerts.unshift({ lvl: 2, text: FAULT_TEXT[k] }); });
+
+      compL = Math.max(L.dP, L.sP, L.dT, F.compressor ? 2 : 0);
+      condL = Math.max(L.cT, L.dP, F.condenser ? 2 : 0);
+      capL = Math.max(L.shHi, F.capillary ? 2 : 0);
+      evapL = Math.max(L.shLo, L.shHi, F.evaporator ? 2 : 0);
+    }
+
+    setHealth(el.compressor, compL);
+    setHealth(el.condenser, condL);
+    setHealth(el.capillaryTube, capL);
+    setHealth(el.evaporator, evapL);
+    setHealth(el.rfcard_comp, compL); setHealth(el.rfcard_cond, condL);
+    setHealth(el.rfcard_cap, capL); setHealth(el.rfcard_evap, evapL);
+
+    const sh = Math.max(L.shLo, L.shHi);
+    [["svgDischargePressure", L.dP], ["svgDischargeTemp", L.dT], ["svgSuctionPressure", L.sP],
+     ["svgCondenserOutletTemp", L.cT], ["svgCondenserInletTemp", L.dT], ["svgCapInletTemp", L.cT], ["svgEvapCoilInTemp", capL], ["svgEvaporatorInletTemp", capL], ["svgEvaporatorOutletTemp", sh]
+    ].forEach((r) => setHealth(el[r[0]], r[1]));
+    const pv = (id, lvl) => { if (el[id] && el[id].parentElement) setHealth(el[id].parentElement, lvl); };
+    pv("pvSuctionP", L.sP); pv("pvDischargeP", L.dP); pv("pvCondInTemp", L.dT); pv("pvCondOutTemp", L.cT);
+    pv("pvExpInTemp", L.cT); pv("pvExpOutTemp", capL); pv("pvEvapInTemp", capL); pv("pvEvapOutTemp", sh);
+
+    ["rfCompDisP", "rfCondOutT", "rfCapEvapIn", "rfEvapOutT"].forEach((id, i) => {
+      const n = document.getElementById(id);
+      if (n) setHealth(n.closest(".inline-ctrl-card"), [compL, condL, capL, evapL][i]);
+    });
+
+    if (el.valFault) {
+      const liveFault = active && !s.isHistorical && s.activeFault && s.activeFault !== "None";
+      el.valFault.textContent = liveFault ? s.activeFault.toUpperCase() : (active ? "NONE (NORMAL)" : "--");
+      setLamp(el.lampFault, liveFault ? "alarm" : (active ? "on" : ""));
+    }
+    if (el.valCycle) el.valCycle.textContent = active && !s.isHistorical ? Math.floor(s.cycleSeconds || 0) + " s / 60 s" : "-- / 60 s";
+
+    // Fan rotation follows the component's fan speed; 0 % stops the blades.
+    [[el.condenser, s.condenserFanSpeed], [el.evaporator, s.evaporatorFanSpeed]].forEach((f) => {
+      if (!f[0] || typeof f[1] !== "number") return;
+      const pct = Math.max(0, Math.min(100, f[1]));
+      f[0].classList.toggle("fan-stopped", pct < 1);
+      if (pct >= 1) f[0].style.setProperty("--fan-dur", (0.3 / (pct / 100)).toFixed(2) + "s");
+    });
+
+    const bar = document.getElementById("rfAlertBar");
+    if (bar) {
+      bar.hidden = alerts.length === 0;
+      const html = alerts.length ? '<span class="alert-tag">ALERT</span>' + alerts.map((a) =>
+        '<span class="' + (a.lvl === 2 ? "lvl-alarm" : "lvl-warn") + '">&#9888; ' + a.text + "</span>").join("") : "";
+      if (bar.dataset.sig !== html) { bar.innerHTML = html; bar.dataset.sig = html; }
+    }
   }
 
   let activeState = null;
@@ -155,20 +308,21 @@
     if (el.lampSystemStatus) setLamp(el.lampSystemStatus, isSimulating ? (s.systemStatus === "RUNNING" ? "on" : "warm") : "");
 
     const compOn = isSimulating && s.running;
-    if (el.valCompressor) el.valCompressor.textContent = compOn ? "ON" : "OFF";
-    if (el.lampCompressor) setLamp(el.lampCompressor, compOn ? "on" : "");
+    const fl = (!s.isHistorical && s.faults) ? s.faults : {};
+    if (el.valCompressor) el.valCompressor.textContent = compOn ? (fl.compressor ? "FAULT" : "ON") : "OFF";
+    if (el.lampCompressor) setLamp(el.lampCompressor, compOn ? (fl.compressor ? "alarm" : "on") : "");
 
     const condActive = isSimulating && s.running;
-    if (el.valCondenser) el.valCondenser.textContent = condActive ? "ACTIVE" : "IDLE";
-    if (el.lampCondenser) setLamp(el.lampCondenser, condActive ? "warm" : "");
+    if (el.valCondenser) el.valCondenser.textContent = condActive ? (fl.condenser ? "FAULT" : "ACTIVE") : "IDLE";
+    if (el.lampCondenser) setLamp(el.lampCondenser, condActive ? (fl.condenser ? "alarm" : "warm") : "");
 
     const evapActive = isSimulating && s.running;
-    if (el.valEvaporator) el.valEvaporator.textContent = evapActive ? "ACTIVE" : "IDLE";
-    if (el.lampEvaporator) setLamp(el.lampEvaporator, evapActive ? "cool" : "");
+    if (el.valEvaporator) el.valEvaporator.textContent = evapActive ? (fl.evaporator ? "FAULT" : "ACTIVE") : "IDLE";
+    if (el.lampEvaporator) setLamp(el.lampEvaporator, evapActive ? (fl.evaporator ? "alarm" : "cool") : "");
 
     const capActive = isSimulating && s.running;
-    if (el.valCapillary) el.valCapillary.textContent = capActive ? "METERING" : "IDLE";
-    if (el.lampCapillary) setLamp(el.lampCapillary, capActive ? "cool" : "");
+    if (el.valCapillary) el.valCapillary.textContent = capActive ? (fl.capillary ? "FAULT" : "METERING") : "IDLE";
+    if (el.lampCapillary) setLamp(el.lampCapillary, capActive ? (fl.capillary ? "alarm" : "cool") : "");
 
     // ---- Live parameters (Values ALWAYS show the historical record's numbers) ----
     if (el.pvSuctionP) el.pvSuctionP.textContent = s.suctionPressure.toFixed(1) + " bar";
@@ -215,9 +369,13 @@
     if (el.inlineSetTemp) el.inlineSetTemp.textContent = s.setTemperature.toFixed(1) + " °C";
     if (el.inlineFanStatus) { el.inlineFanStatus.textContent = fanStatus; el.inlineFanStatus.className = "actuator-readout " + (s.fanOn ? "on" : "off"); }
 
-    if (el.ahuValveStem) {
-      const y = 81 + valve * 0.06;
-      el.ahuValveStem.setAttribute("y2", y.toFixed(1));
+    if (el.ahuValveStem) el.ahuValveStem.setAttribute("y2", (72 - valve * 0.05).toFixed(1));
+    if (el.ahuHeatingValveStem) el.ahuHeatingValveStem.setAttribute("y2", (72 - heatingValve * 0.05).toFixed(1));
+    if (el.ahuHeatingValveCmd) el.ahuHeatingValveCmd.textContent = heatingValve + " %";
+    if (el.ahuHeatingValve) el.ahuHeatingValve.classList.toggle("active", heatingValve > 2);
+    if (el.ahuHotFlow) {
+      el.ahuHotFlow.style.opacity = String(heatingValve / 100);
+      el.ahuHotFlow.style.animationDuration = Math.max(0.18, 1.1 - heatingValve / 100).toFixed(2) + "s";
     }
     if (el.ahuCoolingValve) el.ahuCoolingValve.classList.toggle("active", valve > 2);
     if (el.ahuWaterFlow) {
@@ -264,6 +422,7 @@
       el.ahuFanRotor.classList.toggle("active", s.fanOn && s.vfdFrequency > 0);
       el.ahuFanRotor.style.setProperty("--fan-speed", Math.max(0.20, 1.1 - (s.vfdFrequency / 60) * 0.9).toFixed(2) + "s");
     }
+    updateAhuReadings(s);
     setDamperPosition(el.ahuDamper, damper);
     setDamperPosition(el.ahuVavOutdoor, vav);
     setDamperPosition(el.ahuVavReturn, vav);
@@ -293,6 +452,10 @@
     if (el.capillaryTube) setComponentState(el.capillaryTube, capActive ? "state-cooling" : "state-off");
     if (el.capillaryGlow) el.capillaryGlow.classList.toggle("active", capActive);
 
+    updateRefrigHealth(s, isSimulating && s.running);
+    const dirArrows = document.getElementById("flowArrows");
+    if (dirArrows) dirArrows.classList.toggle("flowing", !!(isSimulating && s.running));
+
     // ---- Sensor readouts on the diagram (Always display historical frame values) ----
     if (el.svgDischargePressure) el.svgDischargePressure.textContent = s.dischargePressure.toFixed(1) + " bar";
     if (el.svgDischargeTemp) el.svgDischargeTemp.textContent = s.dischargeTemp.toFixed(1) + "°C";
@@ -300,6 +463,13 @@
     if (el.svgCondenserOutletTemp) el.svgCondenserOutletTemp.textContent = s.condenserOutletTemp.toFixed(1) + "°C";
     if (el.svgEvaporatorInletTemp) el.svgEvaporatorInletTemp.textContent = s.evaporatorInletTemp.toFixed(1) + "°C";
     if (el.svgEvaporatorOutletTemp) el.svgEvaporatorOutletTemp.textContent = s.evaporatorOutletTemp.toFixed(1) + "°C";
+    if (el.svgCondenserInletTemp) el.svgCondenserInletTemp.textContent = s.dischargeTemp.toFixed(1) + "°C";
+    if (el.svgCapInletTemp) el.svgCapInletTemp.textContent = s.condenserOutletTemp.toFixed(1) + "°C";
+    if (el.svgEvapCoilInTemp) el.svgEvapCoilInTemp.textContent = s.evaporatorInletTemp.toFixed(1) + "°C";
+    if (el.svgCompSpeed) el.svgCompSpeed.textContent = Math.round(s.compressorSpeed || 0) + " Hz";
+    if (el.svgCondFanSpeed) el.svgCondFanSpeed.textContent = Math.round(s.condenserFanSpeed || 0) + " %";
+    if (el.svgCapOpening) el.svgCapOpening.textContent = Math.round(s.capillaryOpening || 0) + " %";
+    if (el.svgEvapFanSpeed) el.svgEvapFanSpeed.textContent = Math.round(s.evaporatorFanSpeed || 0) + " %";
   }
 
   // ------------------------------------------------------------
@@ -307,19 +477,19 @@
   // ------------------------------------------------------------
   const FLOW_SEGMENTS = [
     // 1. Hot gas discharge: compressor right port (208, 200) → S-curve up → condenser left inlet (244, 93)
-    { points: [[208, 200], [222, 200], [234, 150], [234, 93], [244, 93]], hot: true },
+    { points: [[208, 200], [222, 200], [234, 150], [234, 93], [244, 93]], hot: true, color: "#e03a2c" },
     // 2. Through condenser (left to right, down serpentines to fan bottom)
-    { points: [[244, 93], [617, 93], [617, 239], [660, 276]], hot: true },
+    { points: [[244, 93], [617, 93], [617, 239], [660, 276]], hot: true, color: "#e8512b" },
     // 3. High-P liquid line: condenser bottom → down to y=360 → right to x=736 → up to y=290 → capillary inlet
-    { points: [[660, 276], [660, 360], [736, 360], [736, 290], [760, 290]], hot: true },
+    { points: [[660, 276], [660, 360], [736, 360], [736, 290], [760, 290]], hot: true, color: "#b03a2e" },
     // 4. Through capillary tube (expansion — left to right through copper spiral coil)
-    { points: [[760, 290], [974, 290]], hot: false },
+    { points: [[760, 290], [974, 290]], hot: false, color: "#e8863a" },
     // 5. Low-P expanded line: capillary outlet → right → down → left → evaporator right
-    { points: [[974, 290], [1025, 290], [1025, 525], [672, 525]], hot: false },
+    { points: [[974, 290], [1025, 290], [1025, 525], [672, 525]], hot: false, color: "#2a7fc9" },
     // 6. Through evaporator (right to left at y=525)
-    { points: [[672, 525], [215, 525]], hot: false },
+    { points: [[672, 525], [215, 525]], hot: false, color: "#4aa3df" },
     // 7. Suction line: evaporator left → left → up → right into compressor left port (88, 293)
-    { points: [[215, 525], [58, 525], [58, 293], [88, 293]], hot: false }
+    { points: [[215, 525], [58, 525], [58, 293], [88, 293]], hot: false, color: "#1f6fb5" }
   ];
 
   const totalLengths = [];
@@ -356,7 +526,7 @@
             const frac = segDist === 0 ? 0 : (d - acc) / segDist;
             const x = seg.points[j][0] + (seg.points[j + 1][0] - seg.points[j][0]) * frac;
             const y = seg.points[j][1] + (seg.points[j + 1][1] - seg.points[j][1]) * frac;
-            return { point: [x, y], hot: seg.hot };
+            return { point: [x, y], hot: seg.hot, color: seg.color, angle: Math.atan2(seg.points[j + 1][1] - seg.points[j][1], seg.points[j + 1][0] - seg.points[j][0]) * 180 / Math.PI };
           }
           acc += segDist;
         }
@@ -366,10 +536,56 @@
     return { point: FLOW_SEGMENTS[0].points[0], hot: true };
   }
 
-  const DOT_COUNT = 36;
+
+  // ---- Fan air-flow arrows (condenser warm air, evaporator cold air) ----
+  // Air moves vertically through each coil: warm air rises off the condenser,
+  // cool air sinks off the evaporator (kept apart from the horizontal refrigerant lines).
+  const AIR_ZONES = [
+    { id: "condenser", a0: 268, a1: 74, cols: [300, 350, 400, 450, 500, 550, 595], color: "#f0883e", key: "condenserFanSpeed", per: 3 },
+    { id: "evaporator", a0: 458, a1: 598, cols: [250, 295, 340, 385, 430, 475, 520, 565], color: "#2fb6ee", key: "evaporatorFanSpeed", per: 2 }
+  ];
+  const airArrows = [];
+  function initAirArrows() {
+    const host = document.getElementById("airFlowArrows");
+    if (!host) return;
+    host.innerHTML = "";
+    airArrows.length = 0;
+    AIR_ZONES.forEach((z) => {
+      const span = Math.abs(z.a1 - z.a0);
+      z.dir = z.a1 > z.a0 ? 1 : -1;
+      z.cols.forEach((x, ci) => {
+        for (let i = 0; i < z.per; i++) {
+          const node = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          node.setAttribute("d", "M -5,-5 L 3,0 L -5,5");
+          node.setAttribute("class", "air-arrow");
+          node.setAttribute("stroke", z.color);
+          host.appendChild(node);
+          airArrows.push({ el: node, zone: z, x: x, off: ((i + (ci % 2) * 0.5) / z.per) * span });
+        }
+      });
+    });
+  }
+  function stepAirArrows(dt, flowing) {
+    const s = activeState || (window.Sim ? window.Sim.state : null);
+    airArrows.forEach((a) => {
+      const z = a.zone;
+      const pct = s && typeof s[z.key] === "number" ? Math.max(0, Math.min(100, s[z.key])) : 0;
+      if (!flowing || pct < 1) { a.el.style.opacity = "0"; return; }
+      const span = Math.abs(z.a1 - z.a0);
+      a.off = (a.off + (22 + pct * 1.6) * dt) % span;
+      const t = a.off / span;
+      const fade = Math.min(1, t / 0.12, (1 - t) / 0.12);
+      const y = z.a0 + z.dir * a.off;
+      a.el.setAttribute("transform", "translate(" + a.x + "," + y.toFixed(1) + ") rotate(" + (z.dir > 0 ? 90 : -90) + ")");
+      a.el.style.opacity = (fade * (0.35 + 0.6 * pct / 100)).toFixed(2);
+    });
+  }
+
+  const DOT_COUNT = 30;
   const dots = [];
 
   function initFlowDots() {
+    initAirArrows();
     precalculateCircuit();
     if (!el.refrigerantFlow) return;
     el.refrigerantFlow.innerHTML = "";
@@ -378,11 +594,11 @@
     const spacing = circuitLength / DOT_COUNT;
     for (let i = 0; i < DOT_COUNT; i++) {
       const initialDist = i * spacing;
-      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      circle.setAttribute("r", "3.5");
-      circle.setAttribute("class", "flow-dot");
-      el.refrigerantFlow.appendChild(circle);
-      dots.push({ el: circle, distance: initialDist });
+      const arrow = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+      arrow.setAttribute("points", "-7,-6 6,0 -7,6 -3,0");
+      arrow.setAttribute("class", "flow-arrow-dot");
+      el.refrigerantFlow.appendChild(arrow);
+      dots.push({ el: arrow, distance: initialDist });
     }
   }
 
@@ -406,7 +622,8 @@
     }
 
     const BASE_SPEED = 140;
-    return BASE_SPEED * (s.running ? 1 : 0);
+    const speedFactor = typeof s.compressorSpeed === "number" ? s.compressorSpeed / 50 : 1;
+    return BASE_SPEED * speedFactor * (s.running ? 1 : 0);
   }
 
   function animateFlow(timestamp) {
@@ -421,11 +638,11 @@
     dots.forEach((dot) => {
       dot.distance += currentFlowSpeed * dt;
       const loc = locate(dot.distance);
-      dot.el.setAttribute("cx", loc.point[0].toFixed(1));
-      dot.el.setAttribute("cy", loc.point[1].toFixed(1));
-      dot.el.classList.toggle("hot", loc.hot);
+      dot.el.setAttribute("transform", "translate(" + loc.point[0].toFixed(1) + "," + loc.point[1].toFixed(1) + ") rotate(" + loc.angle.toFixed(0) + ")");
+      dot.el.setAttribute("fill", loc.color);
     });
 
+    stepAirArrows(dt, currentFlowSpeed > 1);
     requestAnimationFrame(animateFlow);
   }
 
@@ -433,6 +650,7 @@
   const AIR_FLOW_LANES = [-36, -24, -12, 0, 12, 24, 36];
   const AIR_DASH_LENGTH = 46;
   const SUPPLY_DAMPER_START_T = 0.80 + ((992 - 966) / (1062 - 966)) * 0.09;
+  const VAV_DAMPER_T = 0.056;
   const SUPPLY_DAMPER_STOP_X = 992;
   const AIR_GRADIENT_STOP_IDS = [
     "ahuAirGradientStop0", "ahuAirGradientStop1", "ahuAirGradientStop2",
@@ -541,6 +759,7 @@
     const upstreamCfm = s && s.fanOn
       ? Math.min(1800, damperRatio > 0 ? Math.max(0, s.airflowCfm) / damperRatio : 1800 * vfdRatio * vavRatio)
       : 0;
+    // The damper only limits what passes THROUGH it; upstream air keeps moving.
     const active = s && s.fanOn && upstreamCfm > 1;
     const speed = active ? (0.055 + Math.min(1, upstreamCfm / 1800) * 0.30) : 0;
     const cooling = s ? Math.max(0, Math.min(1, s.valveOpening / 100)) : 0;
@@ -571,6 +790,8 @@
       const fanBoost = dot.t >= 0.52 && dot.t < 0.72 ? 1.38 : 1;
       const branchParticleIndex = Math.floor(index / 2);
       const passesDamper = damperRatio >= 1 || (branchParticleIndex * damperRatio) % 1 < damperRatio;
+      const passesVav = vavRatio >= 1 || (index * 0.618) % 1 < vavRatio;
+      if (!passesVav && dot.t >= VAV_DAMPER_T) dot.t = 0;
       if (passesDamper) {
         const damperSpeed = dot.t >= SUPPLY_DAMPER_START_T ? damperRatio : 1;
         dot.t = (dot.t + speed * fanBoost * damperSpeed * dt) % 1;
@@ -593,7 +814,9 @@
       dot.streak.setAttribute("y2", point[1].toFixed(1));
       dot.streak.setAttribute("stroke", color);
       dot.streak.setAttribute("stroke-width", dot.t < 0.18 ? "3.0" : "3.6");
-      const recycleFade = Math.min(1, dot.t / 0.018, (1 - dot.t) / 0.018);
+      let recycleFade = Math.min(1, dot.t / 0.018, (1 - dot.t) / 0.018);
+      // Blocked particles fade out as they reach the closed/partly closed damper.
+      if (!passesDamper) recycleFade = Math.min(recycleFade, Math.max(0, (SUPPLY_DAMPER_START_T - dot.t) / 0.03));
       if (dot.arrow) {
         const ahead = airPath(Math.min(0.999, dot.t + 0.006), dot.branch, dot.lane);
         const angle = Math.atan2(ahead[1] - point[1], ahead[0] - point[0]);
