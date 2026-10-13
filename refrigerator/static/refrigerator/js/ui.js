@@ -58,6 +58,11 @@
   function setDamperPosition(groupEl, percentage) {
     if (!groupEl) return;
     const open = Math.max(0, Math.min(100, percentage)) / 100;
+    groupEl.classList.toggle("is-closed", open <= 0);
+    // Supply damper: 3 blades rotate together, 90deg (closed) -> 0deg (open).
+    groupEl.querySelectorAll(".ahu-supply-blade").forEach((blade) => {
+      blade.style.transform = "rotate(" + (90 * (1 - open)).toFixed(2) + "deg)";
+    });
     groupEl.querySelectorAll(".ahu-damper-blade").forEach((blade) => {
       const pitch = Number(blade.dataset.pitch) || 20;
       const scale = 1 - open * (1 - DAMPER_EDGE_THICKNESS / pitch);
@@ -649,9 +654,9 @@
   const AIR_DOT_COUNT = 36;
   const AIR_FLOW_LANES = [-36, -24, -12, 0, 12, 24, 36];
   const AIR_DASH_LENGTH = 46;
-  const SUPPLY_DAMPER_START_T = 0.80 + ((992 - 966) / (1062 - 966)) * 0.09;
+  const SUPPLY_DAMPER_START_T = 0.80 + ((1038.5 - 966) / (1062 - 966)) * 0.09;
   const VAV_DAMPER_T = 0.056;
-  const SUPPLY_DAMPER_STOP_X = 992;
+  const SUPPLY_DAMPER_STOP_X = 1038.5;
   const AIR_GRADIENT_STOP_IDS = [
     "ahuAirGradientStop0", "ahuAirGradientStop1", "ahuAirGradientStop2",
     "ahuAirGradientStop3", "ahuAirGradientStop4", "ahuAirGradientStop5"

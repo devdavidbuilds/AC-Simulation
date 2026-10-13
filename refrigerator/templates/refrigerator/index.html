@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AHU / Air-Side Simulation â€” {{ unit_tag }}</title>
-<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=3.7">
+<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=4.3">
 </head>
 <body>
 
@@ -329,12 +329,12 @@
                 <rect class="ahu-damper-frame" x="118" y="86" width="72" height="52" rx="2"/>
                 <rect class="ahu-damper-backplate" x="126" y="90" width="56" height="44"/>
                 <g id="ahuVavOutdoor" class="ahu-damper-group"><rect class="ahu-damper-blade" data-pitch="14.00" x="126.00" y="90" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="140.00" y="90" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="154.00" y="90" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="168.00" y="90" width="14.00" height="44"/></g>
-                <g class="ahu-damper-pins"><circle cx="133.00" cy="88" r="2.1"/><circle cx="133.00" cy="136" r="2.1"/><circle cx="147.00" cy="88" r="2.1"/><circle cx="147.00" cy="136" r="2.1"/><circle cx="161.00" cy="88" r="2.1"/><circle cx="161.00" cy="136" r="2.1"/><circle cx="175.00" cy="88" r="2.1"/><circle cx="175.00" cy="136" r="2.1"/></g>
+                
                 <!-- VAV Return Damper frame -->
                 <rect class="ahu-damper-frame" x="118" y="232" width="72" height="52" rx="2"/>
                 <rect class="ahu-damper-backplate" x="126" y="236" width="56" height="44"/>
                 <g id="ahuVavReturn" class="ahu-damper-group"><rect class="ahu-damper-blade" data-pitch="14.00" x="126.00" y="236" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="140.00" y="236" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="154.00" y="236" width="14.00" height="44"/><rect class="ahu-damper-blade" data-pitch="14.00" x="168.00" y="236" width="14.00" height="44"/></g>
-                <g class="ahu-damper-pins"><circle cx="133.00" cy="234" r="2.1"/><circle cx="133.00" cy="282" r="2.1"/><circle cx="147.00" cy="234" r="2.1"/><circle cx="147.00" cy="282" r="2.1"/><circle cx="161.00" cy="234" r="2.1"/><circle cx="161.00" cy="282" r="2.1"/><circle cx="175.00" cy="234" r="2.1"/><circle cx="175.00" cy="282" r="2.1"/></g>
+                
 
                 <!-- Mixing section marks -->
                 <g id="ahuMixingSection">
@@ -454,14 +454,14 @@
                   <path d="M917 111 V246 M929 111 V246 M941 111 V246 M953 111 V246" stroke="#aab4ba" stroke-width="1.5" opacity=".65"/>
                 </g>
                 <!-- Supply Damper: dedicated fixed housing, individually pivoting blades -->
-                <rect class="ahu-damper-frame" x="984" y="88" width="72" height="177" rx="2"/>
-                <rect class="ahu-damper-backplate" x="992" y="92" width="56" height="169"/>
-                <g id="ahuDamper" class="ahu-damper-group"><rect class="ahu-damper-blade" data-pitch="14.00" x="992.00" y="92" width="14.00" height="169"/><rect class="ahu-damper-blade" data-pitch="14.00" x="1006.00" y="92" width="14.00" height="169"/><rect class="ahu-damper-blade" data-pitch="14.00" x="1020.00" y="92" width="14.00" height="169"/><rect class="ahu-damper-blade" data-pitch="14.00" x="1034.00" y="92" width="14.00" height="169"/></g>
-                <g class="ahu-damper-pins"><circle cx="999.00" cy="90" r="2.1"/><circle cx="999.00" cy="263" r="2.1"/><circle cx="1013.00" cy="90" r="2.1"/><circle cx="1013.00" cy="263" r="2.1"/><circle cx="1027.00" cy="90" r="2.1"/><circle cx="1027.00" cy="263" r="2.1"/><circle cx="1041.00" cy="90" r="2.1"/><circle cx="1041.00" cy="263" r="2.1"/></g>
-                <text x="975" y="74" class="ahu-small">SUPPLY DAMPER 0–100%</text>
-                <path d="M235 178 H265 M338 178 H355 M493 178 H510 M640 178 H660 M645 171 H660 M645 185 H660 M880 178 H900 M900 178 H966 M966 178 H1000 M1000 178 H1062 M1062 178 H1135" class="ahu-flow-arrow" marker-end="url(#ahuAirArrow)"/>
+                <g transform="translate(46.5 0)"><rect class="ahu-damper-frame ahu-supply-frame" x="984" y="88" width="72" height="177" rx="2"/>
+                <rect class="ahu-damper-backplate ahu-supply-backplate" x="992" y="92" width="56" height="169"/>
+                <rect class="ahu-supply-shaft" x="1018" y="92" width="4" height="169"/><g id="ahuDamper" class="ahu-damper-group ahu-supply-group"><rect class="ahu-supply-blade" x="991.83" y="114.17" width="56.73" height="12"/><rect class="ahu-supply-blade" x="991.83" y="170.50" width="56.73" height="12"/><rect class="ahu-supply-blade" x="991.83" y="226.83" width="56.73" height="12"/></g>
+                <g class="ahu-damper-pins"><circle cx="1020" cy="120.17" r="1.8"/><circle cx="1020" cy="176.50" r="1.8"/><circle cx="1020" cy="232.83" r="1.8"/></g></g>
+                <text x="1030" y="74" class="ahu-small">SUPPLY DAMPER 0–100%</text>
+                <path d="M235 178 H265 M338 178 H355 M493 178 H510 M640 178 H660 M645 171 H660 M645 185 H660 M880 178 H900 M900 178 H966 M1110 178 H1135" class="ahu-flow-arrow" marker-end="url(#ahuAirArrow)"/>
                 <g id="ahuAirflowDots" class="airflow-streams" clip-path="url(#ahuAirDuctClip)"></g>
-                <text x="1070" y="158" class="ahu-label">SUPPLY AIR</text>
+                <text x="1070" y="62" class="ahu-label">SUPPLY AIR</text>
 
 
                 <!-- Equipment readings (live, placed beside each station) -->
@@ -756,7 +756,7 @@
 
 <script src="{% static 'refrigerator/js/simulation.js' %}?v=2.5"></script>
 <script src="{% static 'refrigerator/js/history.js' %}?v=2.3"></script>
-<script src="{% static 'refrigerator/js/ui.js' %}?v=3.3"></script>
+<script src="{% static 'refrigerator/js/ui.js' %}?v=3.5"></script>
 <script src="{% static 'refrigerator/js/app.js' %}?v=2.3"></script>
 </body>
 </html>

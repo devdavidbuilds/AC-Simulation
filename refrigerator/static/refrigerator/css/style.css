@@ -859,3 +859,24 @@ button.btn-stop:hover { background: #a52a1d; }
 }
 
 .status-lamp.alarm { background: #d93025; box-shadow: 0 0 7px 2px rgba(217,48,37,0.7); animation: rfAlarmPulse 0.8s ease-in-out infinite; }
+
+/* Supply damper: 3 centered blades rotating about their centres (90deg closed -> 0deg open) */
+.ahu-supply-group { transform:none !important; }
+.ahu-supply-blade { fill:#2f8fd0; stroke:#2f8fd0; stroke-width:.6; transform-box:fill-box; transform-origin:center; transition:transform .35s cubic-bezier(.22,.61,.36,1); }
+/* Closed VAV dampers: solid blue, no dark seams */
+.ahu-damper-group.is-closed .ahu-damper-blade { fill:#2f8fd0; stroke:#2f8fd0; stroke-width:1; }
+.ahu-supply-backplate { fill:#17476b; stroke:#17476b; }
+.ahu-supply-shaft { fill:#4aa8e6; }
+.ahu-supply-blade { fill:#2f9be0; stroke:#2f9be0; }
+.ahu-supply-backplate { fill:none; stroke:none; }
+.ahu-supply-frame { fill:none; }
+/* Supply damper: blend with the casing gradient, steel-grey blades */
+.ahu-supply-backplate { fill:url(#ahuCasingInner); stroke:none; }
+.ahu-supply-frame { fill:url(#ahuCasingInner); stroke:#6b7a85; stroke-width:1.2; }
+.ahu-supply-shaft { fill:#6f7f8b; }
+.ahu-supply-blade { fill:#8d9ba5; stroke:#5d6c77; stroke-width:.6; }
+/* VAV dampers: same steel-grey as the supply damper */
+.ahu-damper-blade { fill:#8d9ba5; stroke:#5d6c77; stroke-width:.6; }
+.ahu-damper-group.is-closed .ahu-damper-blade { fill:#8d9ba5; stroke:#8d9ba5; stroke-width:1; }
+/* Supply damper: seamless closed blades (outline = fill, no dark joint line) */
+.ahu-supply-blade { stroke:#8d9ba5; stroke-width:1; }
