@@ -815,6 +815,9 @@ button.btn-stop:hover { background: #a52a1d; }
 .component.health-alarm { filter: drop-shadow(0 0 9px rgba(217,48,37,1)) sepia(0.5) hue-rotate(-30deg) saturate(2); animation: rfAlarmPulse 1s ease-in-out infinite; }
 .component.health-warn .comp-indicator { fill: #f0a014; }
 .component.health-alarm .comp-indicator { fill: #d93025; }
+#ahuSvg .ahu-health-alarm { filter: drop-shadow(0 0 9px rgba(217,48,37,1)) sepia(0.5) hue-rotate(-30deg) saturate(2); animation: rfAlarmPulse 1s ease-in-out infinite; }
+#ahuSvg .ahu-health-alarm > rect, #ahuSvg .ahu-health-alarm rect:not(.ahu-supply-blade):not(.ahu-damper-blade) { stroke: #d93025; stroke-width: 3; }
+#ahuSvg .ahu-health-alarm.ahu-filter-stage > rect { fill: #fdd; }
 @keyframes rfAlarmPulse { 50% { opacity: 0.72; } }
 .sensor-readout.health-warn { fill: #d98200; }
 .sensor-readout.health-alarm { fill: #d93025; }
@@ -880,3 +883,82 @@ button.btn-stop:hover { background: #a52a1d; }
 .ahu-damper-group.is-closed .ahu-damper-blade { fill:#8d9ba5; stroke:#8d9ba5; stroke-width:1; }
 /* Supply damper: seamless closed blades (outline = fill, no dark joint line) */
 .ahu-supply-blade { stroke:#8d9ba5; stroke-width:1; }
+
+/* ============================================================
+   PAGE NAVIGATION (4 pages: AHU / Refrigeration x Simulation / Live)
+   ============================================================ */
+.page-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 28px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #2b3338 0%, #1f2629 100%);
+  border-bottom: 2px solid #0f1416;
+}
+.page-nav .nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-nav .nav-group-label {
+  font: 800 10px var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8fa0a8;
+  margin-right: 2px;
+}
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px 7px 12px;
+  border-radius: 6px;
+  border: 1px solid #46535a;
+  background: linear-gradient(180deg, #3a454b 0%, #2c363b 100%);
+  color: #d6dee2;
+  text-decoration: none;
+  font: 700 12px/1.1 "Segoe UI", Arial, sans-serif;
+  letter-spacing: 0.03em;
+  box-shadow: 0 2px 0 #11171a;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+}
+.nav-btn small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  color: #8fa0a8;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nav-btn:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(180deg, #46555c 0%, #344147 100%);
+  box-shadow: 0 3px 0 #11171a;
+}
+.nav-btn:active { transform: translateY(1px); box-shadow: 0 0 0 #11171a; }
+.nav-btn .nav-ico { font-size: 16px; color: #4fb3ef; }
+.nav-btn .nav-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #2ecc71; box-shadow: 0 0 6px #2ecc71;
+  animation: navPulse 1.6s ease-in-out infinite;
+}
+@keyframes navPulse { 50% { opacity: 0.35; box-shadow: 0 0 0 #2ecc71; } }
+.nav-btn.active { color: #fff; box-shadow: 0 2px 0 #0a0f11, 0 0 10px rgba(79,179,239,0.45); }
+.nav-btn.nav-sim.active { background: linear-gradient(180deg, #2a7bb5 0%, #1b4f72 100%); border-color: #4fb3ef; }
+.nav-btn.nav-live.active { background: linear-gradient(180deg, #27a05a 0%, #1c6b3a 100%); border-color: #2ecc71; box-shadow: 0 2px 0 #0a0f11, 0 0 10px rgba(46,204,113,0.5); }
+.nav-btn.active small { color: #dff3ff; }
+
+/* Live-mode page banner */
+.live-banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 12px; border-radius: 4px;
+  background: #e8f6ee; border: 1px solid #2ecc71; color: #14532d;
+  font: 700 12px "Segoe UI", Arial, sans-serif;
+}
+.live-banner .nav-dot { width: 10px; height: 10px; border-radius: 50%; background: #2ecc71; animation: navPulse 1.6s infinite; }
+.live-banner.stale { background: #fff4e5; border-color: #e67e22; color: #7a3e00; }
+.live-banner.stale .nav-dot { background: #e67e22; animation: none; }
+body.page-live .inline-ctrl-locked { pointer-events: none; opacity: 0.6; }
+
+.mode-switcher[hidden] { display: none; }

@@ -4,17 +4,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AHU / Air-Side Simulation â€” {{ unit_tag }}</title>
-<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=4.3">
+<title>AHU / Air-Side {% if page_mode == "live" %}Live Mode{% else %}Simulation{% endif %} â€” {{ unit_tag }}</title>
+<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=5.0">
 </head>
-<body>
+<body class="page-{{ page_mode }}" data-page-mode="{{ page_mode }}">
 
 <!-- ============================================================
      HEADER
      ============================================================ -->
 <header class="hmi-header">
   <div class="title-block">
-    <div class="system-title">AHU / Air-Side Simulation</div>
+    <div class="system-title">AHU / Air-Side {% if page_mode == "live" %}Live Mode{% else %}Simulation{% endif %}</div>
     <div class="zone-subtitle">{{ plant_name }} &nbsp;â€”&nbsp; {{ unit_name }} &nbsp;â€”&nbsp; {{ unit_tag }}</div>
   </div>
   <div class="meta-block">
@@ -30,18 +30,15 @@
       <span class="meta-label">Operator</span>
       <span class="meta-value">MADHUMANOJ</span>
     </div>
-    <div class="meta-item mode-live" id="hdrModeItem">
+    <div class="meta-item{% if page_mode == 'live' %} mode-live{% endif %}" id="hdrModeItem">
       <span class="meta-label">Simulation Mode</span>
-      <span class="meta-value" id="hdrModeVal">LIVE</span>
+      <span class="meta-value" id="hdrModeVal">{% if page_mode == "live" %}LIVE (STANDBY){% else %}SIMULATION (STANDBY){% endif %}</span>
     </div>
   </div>
 </header>
   
 <!-- PAGE NAVIGATION -->
-<nav class="page-nav">
-  <a href="/" class="page-nav-link active">AHU / Air-Side Simulation</a>
-  <a href="/refrigeration/" class="page-nav-link">Refrigeration Cycle Simulation</a>
-</nav>
+{% include 'refrigerator/_page_nav.html' %}
 
 <!-- ============================================================
      MAIN LAYOUT
@@ -343,7 +340,7 @@
                 </g>
 
                 <!-- Filter -->
-                <g class="ahu-filter-stage">
+                <g id="ahuPreFilter" class="ahu-filter-stage">
                   <rect x="270" y="104" width="66" height="149" rx="4" fill="#e6ebee" stroke="#56646d" stroke-width="2"/>
                   <path d="M279 113 L327 134 L279 155 L327 176 L279 197 L327 218 L279 239" fill="none" stroke="#7b878f" stroke-width="3"/>
                   <path d="M287 111 V246 M299 111 V246 M311 111 V246 M323 111 V246" stroke="#aab4ba" stroke-width="1.5" opacity=".65"/>
@@ -432,7 +429,7 @@
 
                 <!-- Supply fan -->
                 <rect x="660" y="91" width="220" height="175" rx="8" fill="url(#ahuShell)" stroke="#56646d" stroke-width="2"/>
-                <g transform="translate(770 178) scale(1.18)" class="ahu-fan-center">
+                <g id="ahuFanAssembly" transform="translate(770 178) scale(1.18)" class="ahu-fan-center">
                   <circle r="52" fill="#d2d8dc" stroke="#5a6065" stroke-width="2"/>
                   <circle r="46" fill="none" stroke="#98a0a8" stroke-width="1" stroke-dasharray="4,2"/>
                   <g id="ahuFanRotor" class="fan-rotor ahu-fan-rotor">
@@ -448,7 +445,7 @@
                 </g>
 
                 <!-- Supply filter, duct, damper and directional arrows -->
-                <g class="ahu-filter-stage">
+                <g id="ahuSupplyFilterStage" class="ahu-filter-stage">
                   <rect x="900" y="104" width="66" height="149" rx="4" fill="#e6ebee" stroke="#56646d" stroke-width="2"/>
                   <path d="M909 113 L957 134 L909 155 L957 176 L909 197 L957 218 L909 239" fill="none" stroke="#7b878f" stroke-width="3"/>
                   <path d="M917 111 V246 M929 111 V246 M941 111 V246 M953 111 V246" stroke="#aab4ba" stroke-width="1.5" opacity=".65"/>
@@ -554,10 +551,10 @@
       <div class="panel-body">
         
         <!-- Mode Switcher Tabs -->
-        <div class="mode-switcher">
+        <div class="mode-switcher"{% if page_mode != "live" %} hidden{% endif %}>
           <button type="button" id="tabLiveMode" class="mode-tab active live">
             <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2ecc71;"></span>
-            LIVE SIMULATION
+            {% if page_mode == "live" %}LIVE FEED{% else %}LIVE SIMULATION{% endif %}
           </button>
           <button type="button" id="tabHistMode" class="mode-tab">
             <span>â±</span>
@@ -567,6 +564,7 @@
 
         <!-- 1. LIVE MODE CONTROLS -->
         <div id="liveControlsSection" class="mode-section">
+          {% if page_mode == "live" %}<div class="live-banner" id="liveBanner"><span class="nav-dot"></span><span id="liveBannerText">LIVE FEED — waiting for data from PostgreSQL…</span></div>{% else %}
           <div class="control-strip">
             <div class="control-group">
               <span class="control-label">Live System Command</span>
@@ -583,6 +581,7 @@
               </div>
             </div>
           </div>
+        {% endif %}
         </div>
 
         <!-- 2. TIME / HISTORICAL REPLAY CONTROLS (initially hidden) -->
@@ -754,9 +753,9 @@
 
 </main>
 
-<script src="{% static 'refrigerator/js/simulation.js' %}?v=2.5"></script>
-<script src="{% static 'refrigerator/js/history.js' %}?v=2.3"></script>
-<script src="{% static 'refrigerator/js/ui.js' %}?v=3.5"></script>
-<script src="{% static 'refrigerator/js/app.js' %}?v=2.3"></script>
+<script src="{% static 'refrigerator/js/simulation.js' %}?v=6.0"></script>
+<script src="{% static 'refrigerator/js/history.js' %}?v=6.0"></script>
+<script src="{% static 'refrigerator/js/ui.js' %}?v=6.0"></script>
+<script src="{% static 'refrigerator/js/app.js' %}?v=6.0"></script>
 </body>
 </html>

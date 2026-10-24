@@ -324,7 +324,8 @@
     machineState.running = true;
     machineState.systemStatus = "STARTING";
     machineState.startupTicksRemaining = 2;
-    addLog("System started (LIVE MODE)", "ok");
+    machineState.fanOn = true;
+    addLog("System started (SIMULATION MODE)", "ok");
     addLog("Compressor start command issued", "info");
     // Trigger immediate save on startup
     saveTelemetryToDb();
@@ -334,6 +335,7 @@
     if (!machineState.running) return;
     machineState.running = false;
     machineState.systemStatus = "STOPPED";
+    machineState.fanOn = false;
     addLog("System stopped by operator", "info");
     // Trigger immediate save on shutdown
     saveTelemetryToDb();

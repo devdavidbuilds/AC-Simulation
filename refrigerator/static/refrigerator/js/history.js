@@ -269,6 +269,7 @@
 
   window.HistoryPlayer = {
     loadHistory: loadHistory,
+    recordToMachineState: recordToMachineState,
     fetchRangeInfo: fetchRangeInfo,
     play: play,
     pause: pause,

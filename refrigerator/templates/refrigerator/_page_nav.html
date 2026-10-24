@@ -1,0 +1,20 @@
+<nav class="page-nav" aria-label="Simulation pages">
+  <div class="nav-group">
+    <span class="nav-group-label">AHU / Air-Side</span>
+    <a href="/" class="nav-btn nav-sim{% if active_page == 'ahu_sim' %} active{% endif %}">
+      <span class="nav-ico">&#9881;</span><span class="nav-txt">Simulation<small>AHU / Air-Side</small></span>
+    </a>
+    <a href="/ahu/live/" class="nav-btn nav-live{% if active_page == 'ahu_live' %} active{% endif %}">
+      <span class="nav-dot"></span><span class="nav-txt">Live Mode<small>AHU / Air-Side</small></span>
+    </a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Refrigeration Cycle</span>
+    <a href="/refrigeration/" class="nav-btn nav-sim{% if active_page == 'rf_sim' %} active{% endif %}">
+      <span class="nav-ico">&#10052;</span><span class="nav-txt">Simulation<small>Refrigeration Cycle</small></span>
+    </a>
+    <a href="/refrigeration/live/" class="nav-btn nav-live{% if active_page == 'rf_live' %} active{% endif %}">
+      <span class="nav-dot"></span><span class="nav-txt">Live Mode<small>Refrigeration Cycle</small></span>
+    </a>
+  </div>
+</nav>

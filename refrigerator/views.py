@@ -9,29 +9,34 @@ from django.utils.dateparse import parse_datetime
 from .models import RefrigerationTelemetry
 
 
-def refrigerator_dashboard(request):
-    """
-    Serve the Industrial Refrigeration HMI dashboard.
-    """
-    context = {
+def _page_context(page_mode, active_page):
+    return {
         'plant_name': 'Cold Storage Zone 01',
         'unit_name': 'Refrigeration Unit',
         'unit_tag': 'FRG-001',
+        'page_mode': page_mode,      # 'sim' or 'live'
+        'active_page': active_page,  # 'ahu_sim' | 'ahu_live' | 'rf_sim' | 'rf_live'
     }
-    return render(request, 'refrigerator/index.html', context)
+
+
+def refrigerator_dashboard(request):
+    """Page 1: AHU / Air-Side Simulation."""
+    return render(request, 'refrigerator/index.html', _page_context('sim', 'ahu_sim'))
+
+
+def ahu_live_page(request):
+    """Page 2: AHU / Air-Side Live Mode (live feed from PostgreSQL + replay)."""
+    return render(request, 'refrigerator/index.html', _page_context('live', 'ahu_live'))
 
 
 def refrigeration_cycle_page(request):
-    """
-    Serve the Refrigeration Cycle Simulation page (Page 2).
-    Completely separate from the AHU page.
-    """
-    context = {
-        'plant_name': 'Cold Storage Zone 01',
-        'unit_name': 'Refrigeration Unit',
-        'unit_tag': 'FRG-001',
-    }
-    return render(request, 'refrigerator/refrigeration.html', context)
+    """Page 3: Refrigeration Cycle Simulation."""
+    return render(request, 'refrigerator/refrigeration.html', _page_context('sim', 'rf_sim'))
+
+
+def refrigeration_live_page(request):
+    """Page 4: Refrigeration Cycle Live Mode (live feed from PostgreSQL + replay)."""
+    return render(request, 'refrigerator/refrigeration.html', _page_context('live', 'rf_live'))
 
 
 def ahu_controls_page(request):

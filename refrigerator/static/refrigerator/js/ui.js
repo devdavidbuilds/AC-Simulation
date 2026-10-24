@@ -149,6 +149,17 @@
     flagCard("rd_supply", warnSupT || warnStatic);
     flagCard("rd_coolValve", warnSimul); flagCard("rd_heatValve", warnSimul);
 
+    // Malfunctioning equipment glows / pulses in the AHU diagram (like the refrigeration view)
+    const ahuHealth = {
+      ahuVavReturn: warnReturn, ahuPreFilter: warnFilter, ahuSupplyFilterStage: warnSFilter,
+      ahuCoolingCoil: warnCoolOut, ahuHeatingCoil: warnHeatOut, ahuFanAssembly: warnVfd,
+      ahuDamper: warnSupT || warnStatic, ahuCoolingValve: warnSimul, ahuHeatingValve: warnSimul
+    };
+    Object.keys(ahuHealth).forEach((id) => {
+      const node = document.getElementById(id);
+      if (node) node.classList.toggle("ahu-health-alarm", !!ahuHealth[id]);
+    });
+
     const bar = document.getElementById("ahuAlertBar");
     if (bar) {
       bar.hidden = alerts.length === 0;
@@ -297,7 +308,9 @@
         hdrModeVal.textContent = histPlaying ? "HISTORICAL (PLAYING)" : "HISTORICAL (STANDBY)";
         if (hdrModeItem) hdrModeItem.className = histPlaying ? "meta-item mode-live" : "meta-item mode-hist";
       } else {
-        hdrModeVal.textContent = s.running ? "LIVE (RUNNING)" : "LIVE (STOPPED)";
+        const isLiveFeed = document.body && (document.body.dataset.pageMode === "live" || document.body.classList.contains("page-live"));
+        const modePrefix = isLiveFeed ? "LIVE" : "SIMULATION";
+        hdrModeVal.textContent = s.running ? (modePrefix + " (RUNNING)") : (modePrefix + " (STOPPED)");
         if (hdrModeItem) hdrModeItem.className = s.running ? "meta-item mode-live" : "meta-item";
       }
     }
@@ -508,6 +521,7 @@
 
   function precalculateCircuit() {
     circuitLength = 0;
+    totalLengths.length = 0;
     FLOW_SEGMENTS.forEach((seg) => {
       let segLen = 0;
       for (let i = 0; i < seg.points.length - 1; i++) {

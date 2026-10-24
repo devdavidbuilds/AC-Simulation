@@ -4,17 +4,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Refrigeration Cycle Simulation — {{ unit_tag }}</title>
-<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=3.4">
+<title>Refrigeration Cycle {% if page_mode == "live" %}Live Mode{% else %}Simulation{% endif %} — {{ unit_tag }}</title>
+<link rel="stylesheet" href="{% static 'refrigerator/css/style.css' %}?v=5.0">
 </head>
-<body>
+<body class="page-{{ page_mode }}" data-page-mode="{{ page_mode }}">
 
 <!-- ============================================================
      HEADER
      ============================================================ -->
 <header class="hmi-header">
   <div class="title-block">
-    <div class="system-title">Refrigeration Cycle Simulation</div>
+    <div class="system-title">Refrigeration Cycle {% if page_mode == "live" %}Live Mode{% else %}Simulation{% endif %}</div>
     <div class="zone-subtitle">{{ plant_name }} &nbsp;—&nbsp; {{ unit_name }} &nbsp;—&nbsp; {{ unit_tag }}</div>
   </div>
   <div class="meta-block">
@@ -30,18 +30,15 @@
       <span class="meta-label">Operator</span>
       <span class="meta-value">MADHUMANOJ</span>
     </div>
-    <div class="meta-item mode-live" id="hdrModeItem">
+    <div class="meta-item{% if page_mode == 'live' %} mode-live{% endif %}" id="hdrModeItem">
       <span class="meta-label">Simulation Mode</span>
-      <span class="meta-value" id="hdrModeVal">LIVE</span>
+      <span class="meta-value" id="hdrModeVal">{% if page_mode == "live" %}LIVE (STANDBY){% else %}SIMULATION (STANDBY){% endif %}</span>
     </div>
   </div>
 </header>
 
 <!-- PAGE NAVIGATION -->
-<nav class="page-nav">
-  <a href="/" class="page-nav-link">AHU / Air-Side Simulation</a>
-  <a href="/refrigeration/" class="page-nav-link active">Refrigeration Cycle Simulation</a>
-</nav>
+{% include 'refrigerator/_page_nav.html' %}
 
 <!-- ============================================================
      MAIN LAYOUT
@@ -822,10 +819,10 @@
       <div class="panel-body">
         
         <!-- Mode Switcher Tabs -->
-        <div class="mode-switcher">
+        <div class="mode-switcher"{% if page_mode != "live" %} hidden{% endif %}>
           <button type="button" id="tabLiveMode" class="mode-tab active live">
             <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#2ecc71;"></span>
-            LIVE SIMULATION
+            {% if page_mode == "live" %}LIVE FEED{% else %}LIVE SIMULATION{% endif %}
           </button>
           <button type="button" id="tabHistMode" class="mode-tab">
             <span>⏱</span>
@@ -835,6 +832,7 @@
 
         <!-- 1. LIVE MODE CONTROLS -->
         <div id="liveControlsSection" class="mode-section">
+          {% if page_mode == "live" %}<div class="live-banner" id="liveBanner"><span class="nav-dot"></span><span id="liveBannerText">LIVE FEED — waiting for data from PostgreSQL…</span></div>{% else %}
           <div class="control-strip">
             <div class="control-group">
               <span class="control-label">Live System Command</span>
@@ -851,6 +849,7 @@
               </div>
             </div>
           </div>
+        {% endif %}
         </div>
 
         <!-- 2. TIME / HISTORICAL REPLAY CONTROLS (initially hidden) -->
@@ -1030,9 +1029,9 @@
 
 </main>
 
-<script src="{% static 'refrigerator/js/simulation.js' %}?v=3.1"></script>
-<script src="{% static 'refrigerator/js/history.js' %}?v=3.1"></script>
-<script src="{% static 'refrigerator/js/ui.js' %}?v=3.1"></script>
-<script src="{% static 'refrigerator/js/app.js' %}?v=3.1"></script>
+<script src="{% static 'refrigerator/js/simulation.js' %}?v=6.0"></script>
+<script src="{% static 'refrigerator/js/history.js' %}?v=6.0"></script>
+<script src="{% static 'refrigerator/js/ui.js' %}?v=6.0"></script>
+<script src="{% static 'refrigerator/js/app.js' %}?v=6.0"></script>
 </body>
 </html>

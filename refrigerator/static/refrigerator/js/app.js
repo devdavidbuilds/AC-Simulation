@@ -119,6 +119,46 @@
       }
     }
 
+    const isLivePage = Boolean(
+      document.body && (
+        document.body.dataset.pageMode === "live" ||
+        document.body.classList.contains("page-live")
+      )
+    );
+
+    if (isLivePage) {
+      // Live page is a read-only monitor: lock the on-diagram controls and start streaming.
+      document.querySelectorAll("input, button").forEach(function (el) {
+        if (/^(inline|btnStart|btnStop|btnSaveSnapshot)/.test(el.id)) el.disabled = true;
+      });
+      setSimulationMode("live");
+      Sim.setLiveModeActive(false);
+
+      const liveBannerText = document.getElementById("liveBannerText");
+      const pollLatestTelemetry = async () => {
+        try {
+          const info = await HistoryPlayer.fetchRangeInfo();
+          if (info && info.latest_record) {
+            const state = HistoryPlayer.recordToMachineState ? HistoryPlayer.recordToMachineState(info.latest_record) : null;
+            if (state) {
+              UI.renderAll(state, [{
+                time: info.latest_record.time_display || new Date().toLocaleTimeString(),
+                message: "Live telemetry feed received from PostgreSQL (ID #" + info.latest_record.id + ")",
+                severity: "ok"
+              }]);
+              if (liveBannerText) {
+                liveBannerText.textContent = "LIVE FEED — Last record: " + (info.latest_record.time_display || "") + " (ID #" + info.latest_record.id + ", " + info.total_records + " total)";
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("Live telemetry poll failed:", e);
+        }
+      };
+      pollLatestTelemetry();
+      setInterval(pollLatestTelemetry, 3000);
+    }
+
     if (tabLiveMode) tabLiveMode.addEventListener("click", () => setSimulationMode("live"));
     if (tabHistMode) tabHistMode.addEventListener("click", () => setSimulationMode("history"));
 
