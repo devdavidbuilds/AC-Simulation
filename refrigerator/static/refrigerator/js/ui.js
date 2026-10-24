@@ -560,8 +560,8 @@
   // Air moves vertically through each coil: warm air rises off the condenser,
   // cool air sinks off the evaporator (kept apart from the horizontal refrigerant lines).
   const AIR_ZONES = [
-    { id: "condenser", a0: 268, a1: 74, cols: [300, 350, 400, 450, 500, 550, 595], color: "#f0883e", key: "condenserFanSpeed", per: 3 },
-    { id: "evaporator", a0: 458, a1: 598, cols: [250, 295, 340, 385, 430, 475, 520, 565], color: "#2fb6ee", key: "evaporatorFanSpeed", per: 2 }
+    { id: "condenser", a0: 268, a1: 74, cols: [356, 472, 588], color: "#f0883e", key: "condenserFanSpeed", per: 1 },
+    { id: "evaporator", a0: 458, a1: 598, cols: [290, 382, 474, 566], color: "#2fb6ee", key: "evaporatorFanSpeed", per: 1 }
   ];
   const airArrows = [];
   function initAirArrows() {
@@ -596,7 +596,7 @@
       const fade = Math.min(1, t / 0.12, (1 - t) / 0.12);
       const y = z.a0 + z.dir * a.off;
       a.el.setAttribute("transform", "translate(" + a.x + "," + y.toFixed(1) + ") rotate(" + (z.dir > 0 ? 90 : -90) + ")");
-      a.el.style.opacity = (fade * (0.35 + 0.6 * pct / 100)).toFixed(2);
+      a.el.style.opacity = (fade * (0.25 + 0.45 * pct / 100)).toFixed(2);
     });
   }
 
