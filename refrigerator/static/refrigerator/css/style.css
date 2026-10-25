@@ -659,12 +659,12 @@ button.btn-stop:hover { background: #a52a1d; }
 .ahu-damper-group { transition:none; }
 .ahu-damper-blade { fill:url(#ahuDamperBladeGrad); stroke:#1b4a70; stroke-width:.5; transform-box:fill-box; transform-origin:center; transform:scaleX(1); transition:transform .35s cubic-bezier(.22,.61,.36,1); }
 .ahu-damper-pins circle { fill:#1f2d3b; stroke:#9fb3c4; stroke-width:.6; }
-.water-flow { fill:#35aee9; filter:drop-shadow(0 0 4px #35aee988); }
-.water-flow circle { animation:ahuWaterPulse .85s linear infinite; }
+.water-flow { fill:#00f0ff; filter:drop-shadow(0 0 4px #00d2ff) drop-shadow(0 0 7px rgba(0, 210, 255, 0.85)); transition:opacity .3s ease; }
+.water-flow circle { animation:ahuWaterPulse .85s linear infinite; animation-duration:inherit; }
 .water-flow circle:nth-child(2){animation-delay:-.21s}.water-flow circle:nth-child(3){animation-delay:-.42s}.water-flow circle:nth-child(4){animation-delay:-.63s}
-@keyframes ahuWaterPulse {0%{transform:translateX(0);opacity:.15}50%{transform:translateX(7px);opacity:1}100%{transform:translateX(14px);opacity:.15}}
+@keyframes ahuWaterPulse {0%{transform:translateX(0);opacity:.35}50%{transform:translateX(9px);opacity:1}100%{transform:translateX(18px);opacity:.35}}
 .vfd-text { font:800 9px var(--font-mono); fill:#a9ffbd; }
-.air-dot { fill:#38a9e6; filter:drop-shadow(0 0 3px #38a9e688); }
+.air-dot { fill:#00d2ff; filter:drop-shadow(0 0 3px rgba(255,255,255,0.85)) drop-shadow(0 0 5px rgba(0,0,0,0.25)); }
 .actuator-slider { width:100%; height:7px; margin:0; cursor:pointer; accent-color:#247aa8; }
 .actuator-slider.valve{accent-color:#c0392b}.actuator-slider.heating{accent-color:#c66b3d}.actuator-slider.vfd{accent-color:#6b7280}.actuator-slider.vav{accent-color:#7c3aed}.actuator-slider.temp{accent-color:#d97706}
 .slider-scale { display:flex; justify-content:space-between; margin-top:2px; font:700 8px var(--font-mono); color:#7a8188; }
@@ -685,14 +685,17 @@ button.btn-stop:hover { background: #a52a1d; }
 .ahu-filter-stage { filter:drop-shadow(0 1px 1px #0002); }
 .ahu-coil-fins path { opacity:.78; transition:stroke .3s ease; }
 .ahu-coil-tube { fill:none; stroke:#65737b; stroke-width:3.5; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s ease; }
-.ahu-coil-glow { fill:none; stroke:#48c8f0; stroke-width:10; stroke-linecap:round; stroke-linejoin:round; filter:blur(3px); opacity:0; pointer-events:none; transition:opacity .3s ease; }
+.ahu-coil-stage { transition:filter .25s ease; }
+.ahu-coil-glow { fill:none; stroke:#00e5ff; stroke-width:12; stroke-linecap:round; stroke-linejoin:round; filter:blur(4px) drop-shadow(0 0 6px #00d2ff); opacity:0; pointer-events:none; transition:opacity .3s ease; }
 .ahu-coil-header { fill:none; stroke:#65737b; stroke-width:5; stroke-linecap:round; }
-.ahu-water-pipe { fill:none; stroke:#2386b9; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+.ahu-water-pipe { fill:none; stroke:#1f8bbd; stroke-width:3.2; stroke-linecap:round; stroke-linejoin:round; }
+.ahu-water-pipe.ahu-chw-supply { stroke:#00d2ff; stroke-width:4; filter:drop-shadow(0 0 4px rgba(0, 210, 255, 0.95)) drop-shadow(0 0 8px rgba(0, 160, 255, 0.55)); }
+.ahu-water-pipe.ahu-chw-return { stroke:#2596ce; stroke-width:3.2; }
 .ahu-flow-arrow { fill:none; stroke:#73909b; stroke-width:3; stroke-linecap:round; opacity:.3; }
 .ahu-heating-coil { transition:filter .25s ease; }
-#ahuHeatingCoilGlow { transition:opacity .25s ease; }
+#ahuHeatingCoilGlow { fill:#ff3c12; filter:blur(4px) drop-shadow(0 0 8px #ff4500); transition:opacity .25s ease; }
 .ahu-heating-fins { fill:none; stroke:#d67547; stroke-width:1; }
-.ahu-heating-tube { fill:none; stroke:#a9472d; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.ahu-heating-tube { fill:none; stroke:#a9472d; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; transition:stroke .3s ease; }
 .ahu-heating-header { fill:none; stroke:#a9472d; stroke-width:3; stroke-linecap:round; }
 .ahu-fan-center { overflow:visible; }
 .ahu-fan-rotor { transform-box:fill-box; transform-origin:50% 50%; }
@@ -707,11 +710,11 @@ button.btn-stop:hover { background: #a52a1d; }
 .ahu-control-valve.active { filter:drop-shadow(0 0 5px rgba(190,151,52,.36)); }
 #inlineValveSlider, #inlineHeatingValveSlider { accent-color:#b58a2a; }
 .airflow-streams { pointer-events:none; }
-.air-stream-line { fill:none; stroke:url(#ahuAirflowTransition); stroke-width:4; stroke-linecap:round; stroke-dasharray:28 18; stroke-dashoffset:0; filter:drop-shadow(0 0 3px #67c8dfbb); opacity:0; transition:opacity .25s ease; }
+.air-stream-line { fill:none; stroke:url(#ahuAirflowTransition); stroke-width:4.8; stroke-linecap:round; stroke-dasharray:28 18; stroke-dashoffset:0; filter:drop-shadow(0 0 3px rgba(255,255,255,0.55)) drop-shadow(0 0 6px rgba(0,210,255,0.4)); opacity:0; transition:opacity .25s ease; }
 .air-stream-branch { stroke:#d8eef5; stroke-width:3.6; filter:drop-shadow(0 0 3px #91c9d7bb); }
-.air-streak { stroke-width:3.6; filter:drop-shadow(0 0 3px #5bb9d6cc); }
-.air-dot { filter:drop-shadow(0 0 3px #5bb9d6aa); }
-.air-direction-arrow { filter:drop-shadow(0 0 2px #5bb9d688); }
+.air-streak { stroke-width:4.0; filter:drop-shadow(0 0 2.5px rgba(255,255,255,0.7)); }
+.air-dot { filter:drop-shadow(0 0 3px rgba(255,255,255,0.85)) drop-shadow(0 0 5px rgba(0,0,0,0.25)); }
+.air-direction-arrow { filter:drop-shadow(0 0 2.5px rgba(255,255,255,0.65)); }
 
 /* Compact controls are embedded in the AHU diagram's reserved lower area. */
 #ahuSvg foreignObject { overflow: visible; }
@@ -785,7 +788,9 @@ button.btn-stop:hover { background: #a52a1d; }
 .ahu-valve-flange { fill:#b88a28; stroke:#785d23; stroke-width:1; }
 .ahu-valve-title { font-weight:800; letter-spacing:.04em; }
 .ahu-hot-pipe { stroke:#e0662c; }
-.hot-flow { fill:#ff8a4c; filter:drop-shadow(0 0 4px #ff6a2a88); }
+.ahu-water-pipe.ahu-hw-supply { stroke:#ff3b14; stroke-width:4; filter:drop-shadow(0 0 4px rgba(255,60,20,0.95)) drop-shadow(0 0 8px rgba(255,120,20,0.55)); }
+.ahu-water-pipe.ahu-hw-return { stroke:#e65c24; stroke-width:3.2; }
+.hot-flow { fill:#ff6020; filter:drop-shadow(0 0 4px #ff3810) drop-shadow(0 0 8px rgba(255,90,20,0.85)); }
 
 /* Equipment reading cards (SVG) */
 .rd-box { fill:#0e1d29; stroke:#35607f; stroke-width:1; }

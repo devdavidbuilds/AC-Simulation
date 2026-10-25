@@ -69,9 +69,9 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('PGDATABASE', 'AC Simulatiom'),
+        'NAME': os.environ.get('PGDATABASE', 'AC Simulation'),
         'USER': os.environ.get('PGUSER', 'postgres'),
-        'PASSWORD': os.environ.get('PGPASSWORD', 'Manoj@007'),
+        'PASSWORD': os.environ.get('PGPASSWORD', 'davidprince'),
         'HOST': os.environ.get('PGHOST', 'localhost'),
         'PORT': os.environ.get('PGPORT', '5432'),
     }

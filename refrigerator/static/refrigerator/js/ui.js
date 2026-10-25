@@ -392,27 +392,33 @@
     if (el.ahuHeatingValveCmd) el.ahuHeatingValveCmd.textContent = heatingValve + " %";
     if (el.ahuHeatingValve) el.ahuHeatingValve.classList.toggle("active", heatingValve > 2);
     if (el.ahuHotFlow) {
-      el.ahuHotFlow.style.opacity = String(heatingValve / 100);
-      el.ahuHotFlow.style.animationDuration = Math.max(0.18, 1.1 - heatingValve / 100).toFixed(2) + "s";
+      el.ahuHotFlow.style.opacity = String(heatingValve > 2 ? Math.min(1, 0.35 + (heatingValve / 100) * 0.65) : 0);
+      el.ahuHotFlow.style.animationDuration = Math.max(0.22, 1.15 - (heatingValve / 100) * 0.85).toFixed(2) + "s";
     }
     if (el.ahuCoolingValve) el.ahuCoolingValve.classList.toggle("active", valve > 2);
     if (el.ahuWaterFlow) {
-      el.ahuWaterFlow.style.opacity = String(valve / 100);
-      el.ahuWaterFlow.style.animationDuration = Math.max(0.18, 1.1 - valve / 100).toFixed(2) + "s";
+      el.ahuWaterFlow.style.opacity = String(valve > 2 ? Math.min(1, 0.35 + (valve / 100) * 0.65) : 0);
+      el.ahuWaterFlow.style.animationDuration = Math.max(0.22, 1.15 - (valve / 100) * 0.85).toFixed(2) + "s";
     }
     const coolingLevel = Math.max(0, Math.min(100, valve)) / 100;
+    if (el.ahuCoolingCoil) {
+      el.ahuCoolingCoil.classList.toggle("active", coolingLevel > 0);
+      el.ahuCoolingCoil.style.filter = coolingLevel > 0
+        ? "drop-shadow(0 0 " + (8 * coolingLevel).toFixed(1) + "px rgba(0, 210, 255, " + (0.65 * coolingLevel).toFixed(2) + "))"
+        : "none";
+    }
     const coolingTube = el.ahuCoolingCoil && el.ahuCoolingCoil.querySelector(".ahu-coil-tube");
     if (coolingTube) {
       const neutralColor = [101, 115, 123];
-      const activeColor = [32, 169, 213];
+      const activeColor = [0, 215, 255];
       const color = neutralColor.map((start, index) => Math.round(start + (activeColor[index] - start) * coolingLevel));
       coolingTube.style.stroke = "rgb(" + color.join(", ") + ")";
     }
     if (el.ahuCoolingCoil) {
       const finPaths = el.ahuCoolingCoil.querySelectorAll(".ahu-coil-fins path");
       const finColors = [
-        [[125, 137, 144], [50, 147, 185]],
-        [[170, 180, 186], [138, 203, 224]]
+        [[125, 137, 144], [0, 195, 245]],
+        [[170, 180, 186], [120, 230, 255]]
       ];
       finPaths.forEach((path, index) => {
         const colors = finColors[Math.min(index, finColors.length - 1)];
@@ -420,22 +426,22 @@
         path.style.stroke = "rgb(" + color.join(", ") + ")";
       });
     }
-    if (el.ahuCoilGlow) el.ahuCoilGlow.style.opacity = String(0.36 * coolingLevel * coolingLevel);
+    if (el.ahuCoilGlow) el.ahuCoilGlow.style.opacity = String((0.72 * coolingLevel).toFixed(2));
     const heatingLevel = Math.max(0, Math.min(100, heatingValve)) / 100;
     const heatingElement = el.ahuHeatingCoil && el.ahuHeatingCoil.querySelector(".ahu-heating-tube");
     if (el.ahuHeatingCoil) {
       el.ahuHeatingCoil.classList.toggle("active", heatingLevel > 0);
       el.ahuHeatingCoil.style.filter = heatingLevel > 0
-        ? "drop-shadow(0 0 " + (9 * heatingLevel).toFixed(1) + "px rgba(255, 71, 34, " + (0.55 * heatingLevel).toFixed(2) + "))"
+        ? "drop-shadow(0 0 " + (10 * heatingLevel).toFixed(1) + "px rgba(255, 60, 20, " + (0.75 * heatingLevel).toFixed(2) + "))"
         : "none";
     }
     if (heatingElement) {
       const neutralColor = [90, 100, 110];
-      const hotColor = [255, 55, 20];
+      const hotColor = [255, 50, 15];
       const color = neutralColor.map((start, index) => Math.round(start + (hotColor[index] - start) * heatingLevel));
       heatingElement.style.stroke = "rgb(" + color.join(", ") + ")";
     }
-    if (el.ahuHeatingCoilGlow) el.ahuHeatingCoilGlow.style.opacity = String(0.28 * heatingLevel * heatingLevel);
+    if (el.ahuHeatingCoilGlow) el.ahuHeatingCoilGlow.style.opacity = String((0.65 * heatingLevel).toFixed(2));
     if (el.ahuFanRotor) {
       el.ahuFanRotor.classList.toggle("active", s.fanOn && s.vfdFrequency > 0);
       el.ahuFanRotor.style.setProperty("--fan-speed", Math.max(0.20, 1.1 - (s.vfdFrequency / 60) * 0.9).toFixed(2) + "s");
@@ -711,7 +717,7 @@
       streak.setAttribute("class", "air-streak");
       streak.setAttribute("stroke-linecap", "round");
       const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      c.setAttribute("r", (2 + (i % 3) * 0.45).toFixed(2));
+      c.setAttribute("r", (2.4 + (i % 3) * 0.55).toFixed(2));
       c.setAttribute("class", "air-dot");
       const arrow = i % 8 === 0 ? document.createElementNS("http://www.w3.org/2000/svg", "path") : null;
       if (arrow) arrow.setAttribute("class", "air-direction-arrow");
@@ -783,7 +789,7 @@
     const speed = active ? (0.055 + Math.min(1, upstreamCfm / 1800) * 0.30) : 0;
     const cooling = s ? Math.max(0, Math.min(1, s.valveOpening / 100)) : 0;
     const cooledAirTemp = s ? s.returnAirTemperature - cooling * 8.5 : 0;
-    const heating = s ? Math.max(0, Math.min(1, (s.setTemperature - cooledAirTemp) / 8)) : 0;
+    const heating = s ? Math.max(0, Math.min(1, Math.max((s.heatingValveCommand ?? 0) / 100, (s.setTemperature - cooledAirTemp) / 8))) : 0;
     const cfmRatio = Math.min(1, upstreamCfm / 1500);
     const passingLaneCount = Math.ceil(AIR_FLOW_LANES.length * damperRatio);
     if (active) airStreamOffset = (airStreamOffset + speed * 550 * dt) % AIR_DASH_LENGTH;
@@ -798,7 +804,7 @@
         if (passesDamper) offsetSpeed = damperRatio;
       }
       stream.el.style.strokeDashoffset = String(-((airStreamOffset * offsetSpeed + stream.phase) % AIR_DASH_LENGTH));
-      stream.el.style.opacity = active ? String(0.52 + cfmRatio * 0.27) : "0";
+      stream.el.style.opacity = active ? String(0.70 + cfmRatio * 0.28) : "0";
     });
     airGradientStops.forEach((stop, index) => {
       stop.setAttribute("stop-color", airColor(AIR_GRADIENT_POSITIONS[index], cooling, heating));
@@ -823,7 +829,7 @@
       const point = airPath(dot.t, dot.branch, dot.lane);
       const tailT = Math.max(0, dot.t - dot.trailLength);
       const tail = airPath(tailT, dot.branch, dot.lane);
-      const color = airColor(dot.t, cooling, heating);
+      const color = airColor(dot.t, cooling, heating, index);
       dot.el.setAttribute("cx", point[0].toFixed(1));
       dot.el.setAttribute("cy", point[1].toFixed(1));
       dot.el.setAttribute("fill", color);
@@ -832,7 +838,7 @@
       dot.streak.setAttribute("x2", point[0].toFixed(1));
       dot.streak.setAttribute("y2", point[1].toFixed(1));
       dot.streak.setAttribute("stroke", color);
-      dot.streak.setAttribute("stroke-width", dot.t < 0.18 ? "3.0" : "3.6");
+      dot.streak.setAttribute("stroke-width", dot.t < 0.18 ? "3.2" : "4.0");
       let recycleFade = Math.min(1, dot.t / 0.018, (1 - dot.t) / 0.018);
       // Blocked particles fade out as they reach the closed/partly closed damper.
       if (!passesDamper) recycleFade = Math.min(recycleFade, Math.max(0, (SUPPLY_DAMPER_START_T - dot.t) / 0.03));
@@ -847,40 +853,89 @@
         dot.arrow.setAttribute("fill", color);
         dot.arrow.style.opacity = active ? String(Math.min(0.8, 0.5 + s.airflowCfm / 5000) * recycleFade) : "0";
       }
-      const flowOpacity = (0.42 + cfmRatio * 0.34) * dot.opacity;
+      const flowOpacity = (0.62 + cfmRatio * 0.35) * dot.opacity;
       dot.el.style.opacity = active ? String(flowOpacity * recycleFade) : "0";
-      dot.streak.style.opacity = active ? String((0.5 + cfmRatio * 0.32) * dot.opacity * recycleFade) : "0";
+      dot.streak.style.opacity = active ? String((0.68 + cfmRatio * 0.30) * dot.opacity * recycleFade) : "0";
     });
     requestAnimationFrame(animateAirflow);
   }
 
-  function airColor(t, cooling, heating) {
+  function airColor(t, cooling, heating, index) {
     // Stage ranges mirror airPath: neutral mixed air -> cooling coil ->
     // chilled air -> heating coil -> conditioned supply air.
-    const neutral = [145, 181, 195];
-    const cyan = [72, 189, 214];
-    const blue = [42, 133, 190];
-    const warm = [211, 154, 115];
-    const warmMix = Math.min(1, heating * 2);
+    const neutral = [148, 184, 198];
+    const icyCyan = [0, 215, 255];
+    const deepColdBlue = [0, 165, 245];
+    const icyWhite = [228, 250, 255];
+    const hotFiery = [255, 52, 12];
+    const hotOrange = [255, 95, 18];
+    const hotAmber = [255, 165, 25];
+    const hotYellow = [255, 222, 65];
+
     let from = neutral, to = neutral, amount = 0;
-    if (t >= 0.31 && t < 0.414) {
+
+    if (t < 0.26) {
       from = neutral;
-      to = cooling > 0.05 ? blue : neutral;
+      to = neutral;
+      amount = 0;
+    } else if (t >= 0.26 && t < 0.31) {
+      // Entering cooling coil: smoothly shifts from neutral to vivid icy cyan
+      from = neutral;
+      to = cooling > 0.04 ? icyCyan : neutral;
+      amount = ((t - 0.26) / 0.05) * cooling * 0.75;
+    } else if (t >= 0.31 && t < 0.414) {
+      // Passing through cooling coil: deep freezing electric icy blue with icy-white highlights
+      from = cooling > 0.04 ? icyCyan : neutral;
+      to = cooling > 0.04 ? deepColdBlue : neutral;
       amount = ((t - 0.31) / 0.104) * cooling;
+      if (cooling > 0.12 && index !== undefined) {
+        if (index % 4 === 0) return "rgb(" + icyWhite.join(",") + ")";
+        if (index % 4 === 2) return "rgb(" + icyCyan.join(",") + ")";
+      }
     } else if (t >= 0.414 && t < 0.43) {
-      from = cooling > 0.05 ? blue : neutral;
+      // Between coils: chilled cold air
+      from = cooling > 0.04 ? deepColdBlue : neutral;
       to = from;
       amount = 1;
+      if (cooling > 0.12 && index !== undefined && index % 4 === 0) {
+        return "rgb(" + icyWhite.join(",") + ")";
+      }
     } else if (t >= 0.43 && t < 0.534) {
-      from = cooling > 0.05 ? blue : neutral;
-      to = heating > 0.05 ? warm : cyan;
-      amount = ((t - 0.43) / 0.104) * Math.max(cooling, warmMix);
+      // Entering and passing through heating coil: radiant amber to fiery red-orange
+      const incoming = cooling > 0.04 ? deepColdBlue : neutral;
+      from = heating > 0.04 ? hotAmber : incoming;
+      to = heating > 0.04 ? hotFiery : (cooling > 0.04 ? icyCyan : neutral);
+      amount = ((t - 0.43) / 0.104) * (heating > 0.04 ? heating : cooling);
+      if (heating > 0.12 && index !== undefined) {
+        if (index % 4 === 0) return "rgb(" + hotYellow.join(",") + ")";
+        if (index % 4 === 2) return "rgb(" + hotAmber.join(",") + ")";
+      } else if (heating <= 0.04 && cooling > 0.12 && index !== undefined && index % 4 === 0) {
+        return "rgb(" + icyWhite.join(",") + ")";
+      }
     } else if (t >= 0.534) {
-      from = cooling > 0.05 ? blue : neutral;
-      to = heating > 0.05 ? warm : cyan;
-      amount = Math.max(cooling * 0.65, warmMix);
+      // Conditioned supply air downstream
+      if (heating > 0.04) {
+        from = hotFiery;
+        to = hotOrange;
+        amount = Math.min(1, heating * 1.2);
+        if (heating > 0.12 && index !== undefined && index % 4 === 0) {
+          return "rgb(" + hotYellow.join(",") + ")";
+        }
+      } else if (cooling > 0.04) {
+        from = deepColdBlue;
+        to = icyCyan;
+        amount = Math.min(1, cooling * 1.1);
+        if (cooling > 0.12 && index !== undefined && index % 4 === 0) {
+          return "rgb(" + icyWhite.join(",") + ")";
+        }
+      } else {
+        from = neutral;
+        to = neutral;
+        amount = 0;
+      }
     }
-    return "rgb(" + from.map((value, index) => Math.round(value + (to[index] - value) * Math.max(0, Math.min(1, amount)))).join(",") + ")";
+
+    return "rgb(" + from.map((value, idx) => Math.round(value + (to[idx] - value) * Math.max(0, Math.min(1, amount)))).join(",") + ")";
   }
 
   function updateClock() {
