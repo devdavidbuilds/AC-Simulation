@@ -7,17 +7,17 @@ All machine simulation, sensor logic, animation, and fault handling
 happens client-side in JavaScript (see refrigerator/static/refrigerator/js/).
 """
 
+import os
 from pathlib import Path
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-refrigerator-hmi-simulation-dev-key-change-me'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-refrigerator-hmi-simulation-dev-key-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 # Application definition
 
@@ -34,6 +34,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,18 +64,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'project.wsgi.application'
 ASGI_APPLICATION = 'project.asgi.application'
 
-import os
-
-# Database — PostgreSQL "AC Simulatiom"
+# Database — PostgreSQL ("AC Simulation") with DATABASE_URL support for cloud PaaS
+default_db_url = f"postgres://{os.environ.get('PGUSER', 'postgres')}:{os.environ.get('PGPASSWORD', 'Manoj@007')}@{os.environ.get('PGHOST', 'localhost')}:{os.environ.get('PGPORT', '5432')}/{os.environ.get('PGDATABASE', 'AC Simulatiom')}"
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('PGDATABASE', 'AC Simulation'),
-        'USER': os.environ.get('PGUSER', 'postgres'),
-        'PASSWORD': os.environ.get('PGPASSWORD', 'davidprince'),
-        'HOST': os.environ.get('PGHOST', 'localhost'),
-        'PORT': os.environ.get('PGPORT', '5432'),
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL', default_db_url),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -90,7 +87,27 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, SVG images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = []
 
+# WhiteNoise compressed & manifest caching
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# Cloud deployment security settings
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com,https://*.railway.app,https://*.fly.dev').split(',')
+    if origin.strip()
+]
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
