@@ -65,7 +65,7 @@ WSGI_APPLICATION = 'project.wsgi.application'
 ASGI_APPLICATION = 'project.asgi.application'
 
 # Database — PostgreSQL ("AC Simulation") with DATABASE_URL support for cloud PaaS
-default_db_url = f"postgres://{os.environ.get('PGUSER', 'postgres')}:{os.environ.get('PGPASSWORD', 'Manoj@007')}@{os.environ.get('PGHOST', 'localhost')}:{os.environ.get('PGPORT', '5432')}/{os.environ.get('PGDATABASE', 'AC Simulatiom')}"
+default_db_url = f"postgres://{os.environ.get('PGUSER', 'postgres')}:{os.environ.get('PGPASSWORD', 'davidprince')}@{os.environ.get('PGHOST', 'localhost')}:{os.environ.get('PGPORT', '5432')}/{os.environ.get('PGDATABASE', 'AC Simulation')}"
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL', default_db_url),

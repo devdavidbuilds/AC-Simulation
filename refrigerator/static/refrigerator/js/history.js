@@ -111,6 +111,7 @@
       evaporatorInletTemp: tEvapIn,
       evaporatorOutletTemp: tEvapOut,
       valveOpening: Number(rec.valve_opening) || 60,
+      heatingValveCommand: rec.heating_valve_command !== undefined ? Number(rec.heating_valve_command) : 40,
       damperPosition: Number(rec.damper_position) || 70,
       fanOn: rec.fan_on !== undefined ? Boolean(rec.fan_on) : isRunning,
       vfdFrequency: Number(rec.vfd_frequency) || 40,

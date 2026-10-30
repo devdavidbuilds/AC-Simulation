@@ -203,3 +203,126 @@ def get_telemetry_range_info(request):
             'message': f'Failed to get range info: {str(e)}',
         }, status=500)
 
+
+THINGSPEAK_CHANNEL_ID = "3504371"
+THINGSPEAK_READ_KEY = "SNKTWBRJ0LSJIK2I"
+
+
+@require_http_methods(["GET"])
+def get_thingspeak_telemetry(request):
+    """
+    GET /api/telemetry/thingspeak/
+    Fetches the latest live reading from the ECE ESP32-S3 ThingSpeak channel (3504371),
+    maps the sensor data to the AHU / Refrigeration telemetry schema,
+    saves the record to PostgreSQL, and returns the real-time telemetry payload.
+    """
+    import urllib.request
+    import urllib.error
+
+    url = f"https://api.thingspeak.com/channels/{THINGSPEAK_CHANNEL_ID}/feeds/last.json?api_key={THINGSPEAK_READ_KEY}"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+
+        if not data or data == -1:
+            return JsonResponse({'status': 'error', 'message': 'No data found in ThingSpeak channel'}, status=404)
+
+        # Field 1: DHT22 Temperature (°C)
+        # Field 2: DHT22 Humidity (%)
+        # Field 3: BMP280 Temperature (°C)
+        # Field 4: BMP280 Pressure (hPa)
+        # Field 5: BMP280 Altitude (m)
+        # Field 6: MQ-135 Raw air-quality ADC
+        dht_temp = float(data.get('field1') or 24.0)
+        dht_hum = float(data.get('field2') or 50.0)
+        bmp_temp = float(data.get('field3') or dht_temp)
+        bmp_press = float(data.get('field4') or 1013.25)
+        bmp_alt = float(data.get('field5') or 0.0)
+        mq_adc = float(data.get('field6') or 40.0)
+
+        created_at_str = data.get('created_at')
+        entry_id = data.get('entry_id')
+
+        ts = parse_datetime(created_at_str) if created_at_str else timezone.now()
+        if not ts:
+            ts = timezone.now()
+
+        # Check if record with this timestamp already exists to prevent duplicate entries
+        payload = None
+        try:
+            record = RefrigerationTelemetry.objects.filter(timestamp=ts).first()
+            if not record:
+                record = RefrigerationTelemetry.objects.create(
+                    timestamp=ts,
+                    suction_pressure=1.5,
+                    discharge_pressure=10.0,
+                    discharge_temperature=round(dht_temp + 10.0, 1),
+                    condenser_outlet_temp=round(dht_temp, 1),
+                    evaporator_inlet_temp=round(dht_temp - 15.0, 1),
+                    evaporator_outlet_temp=round(dht_temp - 5.0, 1),
+                    compressor_status="RUNNING",
+                    condenser_fan_status="ACTIVE",
+                    evaporator_fan_status="ACTIVE",
+                    system_status="RUNNING",
+                    fault_type="None",
+                    valve_opening=60.0,
+                    damper_position=70.0,
+                    fan_on=True,
+                    vfd_frequency=45.0,
+                    vav_position=70.0,
+                    airflow_cfm=850.0,
+                    supply_air_temperature=round(dht_temp, 1),
+                    return_air_temperature=round(bmp_temp, 1),
+                    supply_static_pressure=round(bmp_press, 1),
+                    set_temperature=22.0,
+                )
+            payload = record.to_dict()
+        except Exception as db_err:
+            payload = {
+                "id": entry_id or 0,
+                "timestamp": ts.isoformat(),
+                "time_display": ts.strftime("%H:%M:%S"),
+                "date_display": ts.strftime("%Y-%m-%d"),
+                "suction_pressure": 1.5,
+                "discharge_pressure": 10.0,
+                "discharge_temperature": round(dht_temp + 10.0, 1),
+                "condenser_outlet_temp": round(dht_temp, 1),
+                "evaporator_inlet_temp": round(dht_temp - 15.0, 1),
+                "evaporator_outlet_temp": round(dht_temp - 5.0, 1),
+                "compressor_status": "RUNNING",
+                "condenser_fan_status": "ACTIVE",
+                "evaporator_fan_status": "ACTIVE",
+                "system_status": "RUNNING",
+                "fault_type": "None",
+                "valve_opening": 60.0,
+                "damper_position": 70.0,
+                "fan_on": True,
+                "vfd_frequency": 45.0,
+                "vav_position": 70.0,
+                "airflow_cfm": 850.0,
+                "supply_air_temperature": round(dht_temp, 1),
+                "return_air_temperature": round(bmp_temp, 1),
+                "supply_static_pressure": round(bmp_press, 1),
+                "set_temperature": 22.0,
+                "db_status": f"Warning: DB sync skipped ({str(db_err)})",
+            }
+        payload['dht_humidity'] = dht_hum
+        payload['bmp_altitude'] = bmp_alt
+        payload['mq_air_quality'] = mq_adc
+        payload['thingspeak_entry_id'] = entry_id
+        payload['hardware_source'] = "ESP32-S3 (ThingSpeak #3504371)"
+
+        return JsonResponse({
+            'status': 'ok',
+            'entry_id': entry_id,
+            'created_at': created_at_str,
+            'telemetry': payload,
+        })
+
+    except urllib.error.URLError as e:
+        return JsonResponse({'status': 'error', 'message': f'ThingSpeak network error: {str(e)}'}, status=502)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'ThingSpeak processing error: {str(e)}'}, status=500)
+
+

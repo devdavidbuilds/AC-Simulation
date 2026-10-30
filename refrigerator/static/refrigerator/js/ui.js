@@ -99,12 +99,13 @@
     const mixT = s.mixedAirTemp !== undefined ? s.mixedAirTemp : OA_FRACTION * OUTDOOR_TEMP + (1 - OA_FRACTION) * s.returnAirTemperature;
     const coolOut = s.coolingOutTemp !== undefined ? s.coolingOutTemp : mixT;
     const heatOut = s.heatingOutTemp !== undefined ? s.heatingOutTemp : coolOut;
-    const mixRh = OA_FRACTION * OUTDOOR_RH + (1 - OA_FRACTION) * RETURN_RH;
+    const returnRh = s.dhtHumidity !== undefined ? Number(s.dhtHumidity) : RETURN_RH;
+    const mixRh = OA_FRACTION * OUTDOOR_RH + (1 - OA_FRACTION) * returnRh;
     const coolDrop = mixT - coolOut, heatRise = heatOut - coolOut;
-    const supplyRh = Math.max(20, mixRh - 0.35 * coolDrop - 0.4 * Math.max(0, heatRise));
+    const supplyRh = s.dhtHumidity !== undefined ? Math.round(Number(s.dhtHumidity)) : Math.max(20, mixRh - 0.35 * coolDrop - 0.4 * Math.max(0, heatRise));
     const dp = 85 * Math.pow(upstream / 1800, 2);
     const sdp = 90 * Math.pow(upstream / 1800, 2);
-    const valve = Math.round(s.valveOpening), hv = Math.round(s.heatingValveCommand);
+    const valve = Math.round(s.valveOpening || 60), hv = Math.round(s.heatingValveCommand !== undefined ? s.heatingValveCommand : 40);
     const damper = Math.round(s.damperPosition), vav = Math.round(s.vavPosition);
     const t1 = (v) => v.toFixed(1) + " °C";
 
@@ -131,7 +132,7 @@
 
     setRd("rdOaTemp", t1(OUTDOOR_TEMP)); setRd("rdOaRh", OUTDOOR_RH + " %"); setRd("rdOaFlow", oaFlow + " CFM");
     setRd("rdVavOaPos", vav + " %"); setRd("rdVavOaFlow", oaFlow + " CFM");
-    setRd("rdRaTemp", t1(s.returnAirTemperature), warnReturn); setRd("rdRaRh", RETURN_RH + " %"); setRd("rdRaFlow", raFlow + " CFM");
+    setRd("rdRaTemp", t1(s.returnAirTemperature), warnReturn); setRd("rdRaRh", returnRh.toFixed(0) + " %"); setRd("rdRaFlow", raFlow + " CFM");
     setRd("rdVavRaPos", vav + " %"); setRd("rdVavRaFlow", raFlow + " CFM");
     setRd("rdMixTemp", t1(mixT)); setRd("rdMixRh", mixRh.toFixed(0) + " %"); setRd("rdMixFlow", Math.round(upstream) + " CFM");
     setRd("rdFilterDp", Math.round(dp) + " Pa", warnFilter); setRd("rdFilterSts", warnFilter ? "ALARM" : "NORMAL", warnFilter);
@@ -359,8 +360,8 @@
     if (el.pvEvapOutTemp) el.pvEvapOutTemp.textContent = s.evaporatorOutletTemp.toFixed(1) + " °C";
 
     // ---- AHU / BMS process and actuator layer ----
-    const valve = Math.round(s.valveOpening);
-    const heatingValve = Math.round(s.heatingValveCommand);
+    const valve = Math.round(s.valveOpening || 60);
+    const heatingValve = Math.round(s.heatingValveCommand !== undefined ? s.heatingValveCommand : 40);
     const damper = Math.round(s.damperPosition);
     const vav = Math.round(s.vavPosition);
     const valveState = valve <= 2 ? "CLOSED" : (valve >= 98 ? "OPEN" : "MODULATING");

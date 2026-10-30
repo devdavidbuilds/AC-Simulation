@@ -12,6 +12,7 @@ urlpatterns = [
     path('refrigeration/live/', views.refrigeration_live_page, name='refrigeration_live'),
     path('refrigerator/live/', views.refrigeration_live_page, name='refrigerator_live_alias'),
     path('api/telemetry/save/', views.save_telemetry, name='save_telemetry'),
+    path('api/telemetry/thingspeak/', views.get_thingspeak_telemetry, name='thingspeak_telemetry'),
     path('api/telemetry/history/', views.get_telemetry_history, name='telemetry_history'),
     path('api/telemetry/range-info/', views.get_telemetry_range_info, name='telemetry_range_info'),
 ]

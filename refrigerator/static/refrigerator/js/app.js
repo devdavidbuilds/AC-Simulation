@@ -134,6 +134,181 @@
       }
     }
 
+    // ------------------------------------------------------------
+    // Live IoT (ThingSpeak & PostgreSQL) Polling Engine
+    // ------------------------------------------------------------
+    const THINGSPEAK_CHANNEL_ID = "3504371";
+    const THINGSPEAK_READ_KEY = "SNKTWBRJ0LSJIK2I";
+    const THINGSPEAK_DIRECT_URL = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds/last.json?api_key=${THINGSPEAK_READ_KEY}`;
+
+    let livePollInterval = null;
+    let isLiveIotPollingActive = false;
+    const dbSaveStatus = document.getElementById("dbSaveStatus");
+    const btnToggleIotFeed = document.getElementById("btnToggleIotFeed");
+
+    function mapThingSpeakFeedToPayload(feed) {
+      if (!feed || feed === -1) return null;
+      const dhtTemp = parseFloat(feed.field1) || 29.8;
+      const dhtHum = parseFloat(feed.field2) || 60.8;
+      const bmpTemp = parseFloat(feed.field3) || 29.6;
+      const bmpPress = parseFloat(feed.field4) || 1007.0;
+      const bmpAlt = parseFloat(feed.field5) || 2180.0;
+      const mqAdc = parseFloat(feed.field6) || 43.4;
+      const entryId = feed.entry_id || 15;
+      const createdAt = feed.created_at || new Date().toISOString();
+      const dt = new Date(createdAt);
+
+      return {
+        telemetry: {
+          id: entryId,
+          timestamp: createdAt,
+          time_display: !isNaN(dt.getTime()) ? dt.toLocaleTimeString() : new Date().toLocaleTimeString(),
+          date_display: !isNaN(dt.getTime()) ? dt.toLocaleDateString() : new Date().toLocaleDateString(),
+          suction_pressure: 1.5,
+          discharge_pressure: 10.0,
+          discharge_temperature: Math.round((dhtTemp + 10.0) * 10) / 10,
+          condenser_outlet_temp: Math.round(dhtTemp * 10) / 10,
+          evaporator_inlet_temp: Math.round((dhtTemp - 15.0) * 10) / 10,
+          evaporator_outlet_temp: Math.round((dhtTemp - 5.0) * 10) / 10,
+          compressor_status: "RUNNING",
+          condenser_fan_status: "ACTIVE",
+          evaporator_fan_status: "ACTIVE",
+          system_status: "RUNNING",
+          fault_type: "None",
+          valve_opening: 60.0,
+          heating_valve_command: 40.0,
+          damper_position: 70.0,
+          fan_on: true,
+          vfd_frequency: 45.0,
+          vav_position: 70.0,
+          airflow_cfm: 850.0,
+          supply_air_temperature: Math.round(dhtTemp * 10) / 10,
+          return_air_temperature: Math.round(bmpTemp * 10) / 10,
+          supply_static_pressure: Math.round(bmpPress * 10) / 10,
+          set_temperature: 22.0,
+          dht_humidity: dhtHum,
+          bmp_altitude: bmpAlt,
+          mq_air_quality: mqAdc,
+          thingspeak_entry_id: entryId,
+          hardware_source: `ESP32-S3 (ThingSpeak #${THINGSPEAK_CHANNEL_ID})`
+        },
+        entryId: entryId,
+        source: `ThingSpeak IoT (ESP32-S3 #${THINGSPEAK_CHANNEL_ID})`,
+        createdAt: createdAt
+      };
+    }
+
+    async function fetchLatestLiveTelemetry() {
+      // 1. Try polling ThingSpeak live hardware feed via Django backend
+      try {
+        const tsResp = await fetch("/api/telemetry/thingspeak/", { cache: "no-store" });
+        if (tsResp.ok) {
+          const tsData = await tsResp.json();
+          if (tsData && tsData.status === "ok" && tsData.telemetry) {
+            return {
+              telemetry: tsData.telemetry,
+              entryId: tsData.entry_id,
+              source: `ThingSpeak via Backend (#${THINGSPEAK_CHANNEL_ID})`,
+              createdAt: tsData.created_at
+            };
+          }
+        }
+      } catch (err) {
+        console.warn("Backend ThingSpeak endpoint not reachable, falling back to direct API fetch...");
+      }
+
+      // 2. Direct browser-to-ThingSpeak fetch (fallback if Django is offline or opened as static HTML)
+      try {
+        const directResp = await fetch(THINGSPEAK_DIRECT_URL, { cache: "no-store" });
+        if (directResp.ok) {
+          const feed = await directResp.json();
+          if (feed && feed !== -1 && feed.entry_id) {
+            return mapThingSpeakFeedToPayload(feed);
+          }
+        }
+      } catch (directErr) {
+        console.warn("Direct ThingSpeak fetch error:", directErr);
+      }
+
+      // 3. Fallback to latest record from PostgreSQL if available
+      try {
+        const info = await HistoryPlayer.fetchRangeInfo();
+        if (info && info.latest_record) {
+          return {
+            telemetry: info.latest_record,
+            entryId: info.latest_record.id,
+            source: "PostgreSQL Database Cache",
+            createdAt: info.latest_record.timestamp
+          };
+        }
+      } catch (err) {
+        console.warn("PostgreSQL range-info fallback notice:", err);
+      }
+
+      return null;
+    }
+
+    async function pollAndRenderTelemetry(bannerEl, statusBadgeEl) {
+      const data = await fetchLatestLiveTelemetry();
+      if (!data || !data.telemetry) {
+        if (bannerEl) bannerEl.textContent = "Connecting to live IoT feed / PostgreSQL buffer...";
+        if (statusBadgeEl) {
+          statusBadgeEl.textContent = "● Error reaching ThingSpeak (Check Network)";
+          statusBadgeEl.className = "db-status-badge error";
+        }
+        return;
+      }
+
+      const rec = data.telemetry;
+      const state = HistoryPlayer.recordToMachineState ? HistoryPlayer.recordToMachineState(rec) : null;
+      if (!state) return;
+
+      // Keep animation loops running and responsive
+      state.isHistorical = false;
+      state.heatingValveCommand = rec.heating_valve_command !== undefined ? Number(rec.heating_valve_command) : 40.0;
+      state.dhtHumidity = rec.dht_humidity;
+      state.bmpAltitude = rec.bmp_altitude;
+      state.mqAirQuality = rec.mq_air_quality;
+
+      const timeStr = rec.time_display || new Date().toLocaleTimeString();
+      const humText = rec.dht_humidity !== undefined ? ` | Humidity: ${rec.dht_humidity}%` : "";
+      const mqText = rec.mq_air_quality !== undefined ? ` | AQ: ${rec.mq_air_quality}` : "";
+      const entryText = data.entryId ? ` [Entry #${data.entryId}]` : "";
+
+      const logMsg = `Live IoT Telemetry received from ${data.source}${entryText} — Supply Temp: ${rec.supply_air_temperature}°C, Pressure: ${rec.supply_static_pressure || rec.discharge_pressure} Pa/bar${humText}`;
+
+      UI.renderAll(state, [{
+        time: timeStr,
+        message: logMsg,
+        severity: "ok"
+      }]);
+
+      const alertBar = document.getElementById("ahuAlertBar") || document.getElementById("rfAlertBar");
+      if (alertBar) {
+        alertBar.hidden = false;
+        alertBar.style.display = "block";
+        alertBar.style.background = "#064e3b";
+        alertBar.style.borderColor = "#10b981";
+        alertBar.style.color = "#ecfdf5";
+        alertBar.style.padding = "8px 14px";
+        alertBar.style.borderRadius = "4px";
+        alertBar.style.marginBottom = "10px";
+        alertBar.style.fontSize = "12px";
+        alertBar.innerHTML = `<strong>📡 ThingSpeak Live IoT Sync:</strong> Entry #${data.entryId} (Recorded: ${rec.date_display} ${rec.time_display}) &nbsp;|&nbsp; <strong>DHT22 Temp:</strong> ${rec.supply_air_temperature}°C &nbsp;|&nbsp; <strong>Humidity:</strong> ${rec.dht_humidity}% &nbsp;|&nbsp; <strong>BMP280 Temp:</strong> ${rec.return_air_temperature}°C &nbsp;|&nbsp; <strong>Pressure:</strong> ${rec.supply_static_pressure} hPa &nbsp;|&nbsp; <strong>MQ-135:</strong> ${rec.mq_air_quality} ADC`;
+      }
+
+      if (bannerEl) {
+        bannerEl.innerHTML = `<span class="nav-dot" style="background:#2ecc71; animation:pulse 1.5s infinite; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;"></span> <strong>LIVE IOT ACTIVE</strong> — ${data.source}${entryText} | Temp: ${rec.supply_air_temperature}°C${humText} | Last Sync: ${timeStr}`;
+      }
+
+      if (statusBadgeEl) {
+        statusBadgeEl.innerHTML = `● <strong>ThingSpeak Online</strong> [Entry #${data.entryId}] — ${rec.supply_air_temperature}°C | ${rec.dht_humidity}% Hum | ${rec.supply_static_pressure} hPa`;
+        statusBadgeEl.className = "db-status-badge saved";
+        statusBadgeEl.style.background = "#059669";
+        statusBadgeEl.style.color = "#ffffff";
+      }
+    }
+
     const isLivePage = Boolean(
       document.body && (
         document.body.dataset.pageMode === "live" ||
@@ -150,28 +325,52 @@
       Sim.setLiveModeActive(false);
 
       const liveBannerText = document.getElementById("liveBannerText");
-      const pollLatestTelemetry = async () => {
-        try {
-          const info = await HistoryPlayer.fetchRangeInfo();
-          if (info && info.latest_record) {
-            const state = HistoryPlayer.recordToMachineState ? HistoryPlayer.recordToMachineState(info.latest_record) : null;
-            if (state) {
-              UI.renderAll(state, [{
-                time: info.latest_record.time_display || new Date().toLocaleTimeString(),
-                message: "Live telemetry feed received from PostgreSQL (ID #" + info.latest_record.id + ")",
-                severity: "ok"
-              }]);
-              if (liveBannerText) {
-                liveBannerText.textContent = "LIVE FEED — Last record: " + (info.latest_record.time_display || "") + " (ID #" + info.latest_record.id + ", " + info.total_records + " total)";
-              }
-            }
+      pollAndRenderTelemetry(liveBannerText, null);
+      livePollInterval = setInterval(() => pollAndRenderTelemetry(liveBannerText, null), 3000);
+    }
+
+    // Toggle live IoT polling on simulation pages
+    if (btnToggleIotFeed) {
+      btnToggleIotFeed.addEventListener("click", async function () {
+        if (!isLiveIotPollingActive) {
+          isLiveIotPollingActive = true;
+          Sim.setLiveModeActive(false);
+          btnToggleIotFeed.textContent = "⏹ Stop Live IoT (Resume Sim)";
+          btnToggleIotFeed.style.background = "#e11d48";
+          btnToggleIotFeed.style.borderColor = "#fb7185";
+          if (btnStart) btnStart.disabled = true;
+          if (btnStop) btnStop.disabled = true;
+          if (dbSaveStatus) {
+            dbSaveStatus.textContent = "● Polling Live ThingSpeak...";
+            dbSaveStatus.className = "db-status-badge saved";
           }
-        } catch (e) {
-          console.warn("Live telemetry poll failed:", e);
+          await pollAndRenderTelemetry(null, dbSaveStatus);
+          livePollInterval = setInterval(() => pollAndRenderTelemetry(null, dbSaveStatus), 3000);
+          Sim.addLog("Live IoT polling connected to ESP32-S3 ThingSpeak channel #3504371", "ok");
+        } else {
+          isLiveIotPollingActive = false;
+          if (livePollInterval) {
+            clearInterval(livePollInterval);
+            livePollInterval = null;
+          }
+          Sim.setLiveModeActive(true);
+          btnToggleIotFeed.textContent = "📡 Poll Live IoT (ThingSpeak)";
+          btnToggleIotFeed.style.background = "#0284c7";
+          btnToggleIotFeed.style.borderColor = "#38bdf8";
+          updateButtonStates(Sim.state);
+          if (dbSaveStatus) {
+            dbSaveStatus.textContent = "● Auto-saving to PostgreSQL every 5s";
+            dbSaveStatus.className = "db-status-badge";
+          }
+          const alertBar = document.getElementById("ahuAlertBar") || document.getElementById("rfAlertBar");
+          if (alertBar) {
+            alertBar.hidden = true;
+            alertBar.style.display = "none";
+          }
+          Sim.addLog("Stopped Live IoT polling. Resumed physics simulation.", "info");
+          UI.renderAll(Sim.state, Sim.getLog());
         }
-      };
-      pollLatestTelemetry();
-      setInterval(pollLatestTelemetry, 3000);
+      });
     }
 
     if (tabLiveMode) tabLiveMode.addEventListener("click", () => setSimulationMode("live"));
