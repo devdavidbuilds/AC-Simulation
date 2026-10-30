@@ -21,6 +21,7 @@
       "lampEvaporator", "valEvaporator",
       "lampCapillary", "valCapillary",
       "pvSuctionP", "pvDischargeP",
+      "pvCompSucTemp", "pvCompDisTemp",
       "pvCondInTemp", "pvCondOutTemp",
       "pvExpInTemp", "pvExpOutTemp",
       "pvEvapInTemp", "pvEvapOutTemp",
@@ -240,7 +241,9 @@
      ["svgCondenserOutletTemp", L.cT], ["svgCondenserInletTemp", L.dT], ["svgCapInletTemp", L.cT], ["svgEvapCoilInTemp", capL], ["svgEvaporatorInletTemp", capL], ["svgEvaporatorOutletTemp", sh]
     ].forEach((r) => setHealth(el[r[0]], r[1]));
     const pv = (id, lvl) => { if (el[id] && el[id].parentElement) setHealth(el[id].parentElement, lvl); };
-    pv("pvSuctionP", L.sP); pv("pvDischargeP", L.dP); pv("pvCondInTemp", L.dT); pv("pvCondOutTemp", L.cT);
+    pv("pvSuctionP", L.sP); pv("pvDischargeP", L.dP);
+    pv("pvCompSucTemp", sh); pv("pvCompDisTemp", L.dT);
+    pv("pvCondInTemp", L.dT); pv("pvCondOutTemp", L.cT);
     pv("pvExpInTemp", L.cT); pv("pvExpOutTemp", capL); pv("pvEvapInTemp", capL); pv("pvEvapOutTemp", sh);
 
     ["rfCompDisP", "rfCondOutT", "rfCapEvapIn", "rfEvapOutT"].forEach((id, i) => {
@@ -346,6 +349,8 @@
     // ---- Live parameters (Values ALWAYS show the historical record's numbers) ----
     if (el.pvSuctionP) el.pvSuctionP.textContent = s.suctionPressure.toFixed(1) + " bar";
     if (el.pvDischargeP) el.pvDischargeP.textContent = s.dischargePressure.toFixed(1) + " bar";
+    if (el.pvCompSucTemp) el.pvCompSucTemp.textContent = (s.evaporatorOutletTemp !== undefined ? s.evaporatorOutletTemp.toFixed(1) : "24.0") + " °C";
+    if (el.pvCompDisTemp) el.pvCompDisTemp.textContent = s.dischargeTemp.toFixed(1) + " °C";
 
     // Condenser
     if (el.pvCondInTemp) el.pvCondInTemp.textContent = s.dischargeTemp.toFixed(1) + " °C";
