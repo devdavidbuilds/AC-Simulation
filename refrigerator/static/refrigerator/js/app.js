@@ -62,6 +62,21 @@
       });
     }
 
+    // ---- Supply Air CFM Controller ----
+    // The CFM slider controls the airflow visualization intensity (from light to brighter)
+    // across all 4 rows (100% full stream flow) independently of the physical simulation's own airflowCfm.
+    const inlineCfmSlider = document.getElementById("inlineCfmSlider");
+    if (inlineCfmSlider) {
+      // Set initial readout display
+      UI.setCfmSetpoint(inlineCfmSlider.value !== "" ? Number(inlineCfmSlider.value) : 250);
+      inlineCfmSlider.addEventListener("input", function () {
+        const raw = Number(this.value);
+        // Clamp and snap to step=10 (browser handles step, but clamp for safety)
+        const clamped = Math.max(0, Math.min(500, isNaN(raw) ? 0 : raw));
+        UI.setCfmSetpoint(clamped);
+      });
+    }
+
     const histStartTime = document.getElementById("histStartTime");
     const histDuration = document.getElementById("histDuration");
     const histEndTimeWrap = document.getElementById("histEndTimeWrap");

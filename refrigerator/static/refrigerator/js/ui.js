@@ -672,11 +672,17 @@
   }
 
   const AIR_DOT_COUNT = 36;
-  const AIR_FLOW_LANES = [-36, -24, -12, 0, 12, 24, 36];
-  const AIR_DASH_LENGTH = 46;
+  // Exactly 4 airflow rows (lanes), evenly spaced across the AHU duct interior (y=86 to y=268).
+  // Lane centers at y=178 + offset: y=133, y=163, y=193, y=223.
+  const AIR_FLOW_LANES = [-45, -15, 15, 45];
+  // 4 lines per row across the 878px duct: 878 / 4 ≈ 220px period
+  const AIR_DASH_LENGTH = 220;
   const SUPPLY_DAMPER_START_T = 0.80 + ((1038.5 - 966) / (1062 - 966)) * 0.09;
   const VAV_DAMPER_T = 0.056;
   const SUPPLY_DAMPER_STOP_X = 1038.5;
+  // Module-level CFM setpoint (0–500), controlled by the inline CFM slider.
+  // This scales visualization flow intensity from light to brighter across all 4 rows.
+  let cfmSetpoint = 250;
   const AIR_GRADIENT_STOP_IDS = [
     "ahuAirGradientStop0", "ahuAirGradientStop1", "ahuAirGradientStop2",
     "ahuAirGradientStop3", "ahuAirGradientStop4", "ahuAirGradientStop5"
@@ -699,27 +705,35 @@
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", pathData);
       path.setAttribute("class", className);
-      path.setAttribute("stroke-dasharray", "28 18");
+      // Dash: 32px on, 188px off — exactly 4 lines (dashes) per row across duct
+      path.setAttribute("stroke-dasharray", "32 188");
       path.setAttribute("stroke-dashoffset", String(-phase));
       el.ahuAirflowDots.appendChild(path);
       airStreamPaths.push({ el: path, phase: phase, laneIndex: laneIndex });
     }
 
-    addStreamPath("M35 112 H137 C151 112 153 125 153 145 C153 164 145 168 145 178 H235", "air-stream-line air-stream-branch", 0);
-    addStreamPath("M35 285 H137 C151 285 153 270 153 251 C153 232 145 221 145 178 H235", "air-stream-line air-stream-branch", 9.5);
+    // Inlet branch paths (no laneIndex → always visible when any air flows)
+    addStreamPath("M35 112 H137 C151 112 153 125 153 145 C153 164 145 168 145 178 H257", "air-stream-line air-stream-branch", 0);
+    addStreamPath("M35 285 H137 C151 285 153 270 153 251 C153 232 145 221 145 178 H257", "air-stream-line air-stream-branch", 55);
+    // Exactly 4 distinct row stream paths across the AHU duct with staggered phase
     AIR_FLOW_LANES.forEach((lane, index) => {
-      addStreamPath("M235 178 L257 " + (178 + lane) + " H1135", "air-stream-line", index * 5.7, index);
+      // Staggered phase offset (0, 55, 110, 165) for natural airflow across rows
+      addStreamPath("M257 " + (178 + lane) + " H1135", "air-stream-line", (index * 55) % AIR_DASH_LENGTH, index);
     });
 
-    const AIR_DOT_COUNT = 48;
-    for (let i = 0; i < AIR_DOT_COUNT; i++) {
+    // 50 dots total: 5 per lane (lane 0..9), evenly offset within each lane
+    const DOTS_PER_LANE = 5;
+    const TOTAL_DOTS = 0;
+    for (let i = 0; i < TOTAL_DOTS; i++) {
+      const laneIdx = i % AIR_FLOW_LANES.length;       // lane 0..9
+      const dotInLane = Math.floor(i / AIR_FLOW_LANES.length); // 0..4
       const streak = document.createElementNS("http://www.w3.org/2000/svg", "line");
       streak.setAttribute("class", "air-streak");
       streak.setAttribute("stroke-linecap", "round");
       const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      c.setAttribute("r", (2.4 + (i % 3) * 0.55).toFixed(2));
+      c.setAttribute("r", (2.2 + (i % 3) * 0.5).toFixed(2));
       c.setAttribute("class", "air-dot");
-      const arrow = i % 8 === 0 ? document.createElementNS("http://www.w3.org/2000/svg", "path") : null;
+      const arrow = (i % 10 === 0) ? document.createElementNS("http://www.w3.org/2000/svg", "path") : null;
       if (arrow) arrow.setAttribute("class", "air-direction-arrow");
       el.ahuAirflowDots.appendChild(streak);
       el.ahuAirflowDots.appendChild(c);
@@ -728,14 +742,17 @@
         el: c,
         streak: streak,
         arrow: arrow,
-        t: i / AIR_DOT_COUNT,
-        branch: i % 2 === 0 ? "outdoor" : "return",
-        lane: AIR_FLOW_LANES[i % AIR_FLOW_LANES.length],
-        opacity: 0.72 + (i % 4) * 0.06,
-        trailLength: 0.03 + (i % 4) * 0.007
+        // Stagger t within each lane so dots are evenly distributed along the path
+        t: (laneIdx / AIR_FLOW_LANES.length) + (dotInLane / TOTAL_DOTS),
+        branch: laneIdx % 2 === 0 ? "outdoor" : "return",
+        lane: AIR_FLOW_LANES[laneIdx],
+        laneIndex: laneIdx,
+        opacity: 0.70 + (i % 4) * 0.07,
+        trailLength: 0.028 + (i % 4) * 0.006
       });
     }
   }
+
 
   function airPath(t, branch, lane) {
     // Physical AHU sequence: branch -> mixing -> filter -> coil -> fan -> damper -> supply.
@@ -791,39 +808,84 @@
     const cooledAirTemp = s ? s.returnAirTemperature - cooling * 8.5 : 0;
     const heating = s ? Math.max(0, Math.min(1, Math.max((s.heatingValveCommand ?? 0) / 100, (s.setTemperature - cooledAirTemp) / 8))) : 0;
     const cfmRatio = Math.min(1, upstreamCfm / 1500);
-    const passingLaneCount = Math.ceil(AIR_FLOW_LANES.length * damperRatio);
-    if (active) airStreamOffset = (airStreamOffset + speed * 550 * dt) % AIR_DASH_LENGTH;
+
+    // CFM setpoint intensity factor: 0.0 (light) to 1.0 (brighter).
+    // All 10 lanes always look like 100% flow; adjusting CFM smoothly scales the visual intensity.
+    const clampedCfm = Math.max(0, Math.min(500, cfmSetpoint));
+    const cfmFactor = clampedCfm / 500;
+
+    const effectiveSpeed = active ? speed * (0.80 + 0.40 * cfmFactor) : 0;
+    if (active) airStreamOffset = (airStreamOffset + effectiveSpeed * 550 * dt) % AIR_DASH_LENGTH;
+
+    // Intensity scaling from light to brighter:
+    // Opacity: light ~0.30 up to brighter ~0.98
+    const streamOpacity = active ? String((0.30 + 0.68 * cfmFactor).toFixed(2)) : "0";
+    const branchOpacity = active ? String((0.26 + 0.68 * cfmFactor).toFixed(2)) : "0";
+
+    // Stroke width: light 3.2px up to brighter 5.6px
+    const streamStrokeWidth = (3.2 + 2.4 * cfmFactor).toFixed(2);
+    const branchStrokeWidth = (2.4 + 2.0 * cfmFactor).toFixed(2);
+
+    // Dynamic glow and brightness filter: from soft light glow to radiant bright neon
+    const glowWhite = (0.35 + 0.60 * cfmFactor).toFixed(2);
+    const glowCyan1 = (0.25 + 0.65 * cfmFactor).toFixed(2);
+    const glowCyan2 = (0.10 + 0.50 * cfmFactor).toFixed(2);
+    const blur1 = (2 + 3 * cfmFactor).toFixed(1);
+    const blur2 = (4 + 6 * cfmFactor).toFixed(1);
+    const blur3 = (8 + 8 * cfmFactor).toFixed(1);
+    const brightnessVal = (0.90 + 0.40 * cfmFactor).toFixed(2);
+    const glowColor = heating > 0.2 ? `rgba(255,160,50,${glowCyan1})` : `rgba(0,210,255,${glowCyan1})`;
+    const streamFilter = active
+      ? `drop-shadow(0 0 ${blur1}px rgba(255,255,255,${glowWhite})) drop-shadow(0 0 ${blur2}px ${glowColor}) drop-shadow(0 0 ${blur3}px rgba(0,210,255,${glowCyan2})) brightness(${brightnessVal})`
+      : "none";
+    const branchFilter = active
+      ? `drop-shadow(0 0 ${blur1}px rgba(255,255,255,${glowWhite})) drop-shadow(0 0 ${blur2}px #91c9d7) brightness(${brightnessVal})`
+      : "none";
+
+    // All stream paths (both branches and all 4 rows) are 100% active when airflow is running
     airStreamPaths.forEach((stream) => {
       let offsetSpeed = 1;
       if (stream.laneIndex !== undefined) {
+        // All 4 rows are active — no partial release!
         const lane = AIR_FLOW_LANES[stream.laneIndex];
-        const passesDamper = stream.laneIndex < passingLaneCount;
+        const passesDamper = stream.laneIndex < Math.ceil(AIR_FLOW_LANES.length * damperRatio);
         const endX = passesDamper ? 1135 : SUPPLY_DAMPER_STOP_X;
-        const pathData = "M235 178 L257 " + (178 + lane) + " H" + endX;
+        const pathData = "M257 " + (178 + lane) + " H" + endX;
         if (stream.el.getAttribute("d") !== pathData) stream.el.setAttribute("d", pathData);
         if (passesDamper) offsetSpeed = damperRatio;
+        stream.el.style.opacity = streamOpacity;
+        stream.el.style.strokeWidth = streamStrokeWidth + "px";
+        stream.el.style.filter = streamFilter;
+      } else {
+        // Branch inlet paths — fully visible with matching intensity
+        stream.el.style.opacity = branchOpacity;
+        stream.el.style.strokeWidth = branchStrokeWidth + "px";
+        stream.el.style.filter = branchFilter;
       }
       stream.el.style.strokeDashoffset = String(-((airStreamOffset * offsetSpeed + stream.phase) % AIR_DASH_LENGTH));
-      stream.el.style.opacity = active ? String(0.70 + cfmRatio * 0.28) : "0";
     });
+
     airGradientStops.forEach((stop, index) => {
       stop.setAttribute("stop-color", airColor(AIR_GRADIENT_POSITIONS[index], cooling, heating));
+      stop.setAttribute("stop-opacity", String((0.55 + 0.45 * cfmFactor).toFixed(2)));
     });
+
     airDots.forEach((dot, index) => {
+      const showDot = active;
+
       // A small local acceleration around the fan gives the stream a clear
       // fan relationship while preserving its left-to-right route.
       const fanBoost = dot.t >= 0.52 && dot.t < 0.72 ? 1.38 : 1;
-      const branchParticleIndex = Math.floor(index / 2);
-      const passesDamper = damperRatio >= 1 || (branchParticleIndex * damperRatio) % 1 < damperRatio;
+      const passesDamper = damperRatio >= 1 || dot.laneIndex < Math.ceil(AIR_FLOW_LANES.length * damperRatio);
       const passesVav = vavRatio >= 1 || (index * 0.618) % 1 < vavRatio;
       if (!passesVav && dot.t >= VAV_DAMPER_T) dot.t = 0;
       if (passesDamper) {
         const damperSpeed = dot.t >= SUPPLY_DAMPER_START_T ? damperRatio : 1;
-        dot.t = (dot.t + speed * fanBoost * damperSpeed * dt) % 1;
+        dot.t = (dot.t + effectiveSpeed * fanBoost * damperSpeed * dt) % 1;
       } else if (dot.t >= SUPPLY_DAMPER_START_T) {
         dot.t = dot.t <= SUPPLY_DAMPER_START_T + 0.0001 ? 0 : SUPPLY_DAMPER_START_T;
       } else {
-        dot.t += speed * fanBoost * dt;
+        dot.t += effectiveSpeed * fanBoost * dt;
         if (dot.t >= SUPPLY_DAMPER_START_T) dot.t = SUPPLY_DAMPER_START_T;
       }
       const point = airPath(dot.t, dot.branch, dot.lane);
@@ -851,14 +913,15 @@
         const sideY = Math.cos(angle) * 3.5;
         dot.arrow.setAttribute("d", "M" + point[0].toFixed(1) + " " + point[1].toFixed(1) + " L" + (backX + sideX).toFixed(1) + " " + (backY + sideY).toFixed(1) + " L" + (backX - sideX).toFixed(1) + " " + (backY - sideY).toFixed(1) + " Z");
         dot.arrow.setAttribute("fill", color);
-        dot.arrow.style.opacity = active ? String(Math.min(0.8, 0.5 + s.airflowCfm / 5000) * recycleFade) : "0";
+        dot.arrow.style.opacity = showDot ? String(Math.min(0.8, 0.5 + (s.airflowCfm || 0) / 5000) * recycleFade) : "0";
       }
-      const flowOpacity = (0.62 + cfmRatio * 0.35) * dot.opacity;
-      dot.el.style.opacity = active ? String(flowOpacity * recycleFade) : "0";
-      dot.streak.style.opacity = active ? String((0.68 + cfmRatio * 0.30) * dot.opacity * recycleFade) : "0";
+      const flowOpacity = (0.35 + 0.65 * cfmFactor) * (0.62 + cfmRatio * 0.35) * dot.opacity;
+      dot.el.style.opacity = showDot ? String(flowOpacity * recycleFade) : "0";
+      dot.streak.style.opacity = showDot ? String((0.35 + 0.65 * cfmFactor) * (0.68 + cfmRatio * 0.30) * dot.opacity * recycleFade) : "0";
     });
     requestAnimationFrame(animateAirflow);
   }
+
 
   function airColor(t, cooling, heating, index) {
     // Stage ranges mirror airPath: neutral mixed air -> cooling coil ->
@@ -945,6 +1008,29 @@
     if (el.hdrTime) el.hdrTime.textContent = now.toLocaleTimeString("en-GB", { hour12: false });
   }
 
+  /**
+   * Set the supply-air CFM setpoint (0–500).
+   * Updates the module-level cfmSetpoint used by animateAirflow for flow intensity scaling (light to brighter),
+   * and refreshes the inline CFM readout elements and the SVG rd_damper card readouts.
+   */
+  function setCfmSetpoint(value) {
+    const clamped = Math.max(0, Math.min(500, Math.round(Number(value) || 0) / 10) * 10);
+    cfmSetpoint = clamped;
+    const pct = Math.round((clamped / 500) * 100);
+
+    // Inline readouts inside the foreignObject controller
+    const inlineCfmReadout = document.getElementById("inlineCfmReadout");
+    if (inlineCfmReadout) inlineCfmReadout.textContent = clamped + " CFM";
+    const inlineCfmPct = document.getElementById("inlineCfmPct");
+    if (inlineCfmPct) inlineCfmPct.textContent = pct + "%";
+
+    // SVG rd_damper card readouts (beside the supply damper in the visualization)
+    const rdSetpoint = document.getElementById("rdCfmSetpoint");
+    if (rdSetpoint) rdSetpoint.textContent = clamped + " CFM";
+    const rdPct = document.getElementById("rdCfmPct");
+    if (rdPct) rdPct.textContent = pct + "%";
+  }
+
   window.UI = {
     cache: cache,
     renderAll: renderAll,
@@ -953,6 +1039,9 @@
     animateFlow: animateFlow,
     animateAirflow: animateAirflow,
     updateClock: updateClock,
-    getActiveState: () => activeState
+    getActiveState: () => activeState,
+    setCfmSetpoint: setCfmSetpoint,
+    getCfmSetpoint: () => cfmSetpoint
   };
 })();
+
