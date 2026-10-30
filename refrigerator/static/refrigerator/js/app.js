@@ -137,8 +137,8 @@
     // ------------------------------------------------------------
     // Live IoT (ThingSpeak & PostgreSQL) Polling Engine
     // ------------------------------------------------------------
-    const THINGSPEAK_CHANNEL_ID = "3504371";
-    const THINGSPEAK_READ_KEY = "SNKTWBRJ0LSJIK2I";
+    const THINGSPEAK_CHANNEL_ID = "3559899";
+    const THINGSPEAK_READ_KEY = "CAYAWMOIKYR68VDP";
     const THINGSPEAK_DIRECT_URL = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds/last.json?api_key=${THINGSPEAK_READ_KEY}`;
 
     let livePollInterval = null;
@@ -160,18 +160,35 @@
     }
 
     function mapThingSpeakFeedToPayload(feed) {
-      if (!feed || feed === -1) return null;
-      const dhtTemp = parseSensorVal(feed.field1, -40, 120);
-      const dhtHum = parseSensorVal(feed.field2, 0, 100);
-      const bmpTemp = parseSensorVal(feed.field3, -40, 120);
-      const bmpPress = parseSensorVal(feed.field4, 0, 2000);
-      const bmpAlt = parseSensorVal(feed.field5, -1000, 100000);
+      if (!feed || feed === -1 || feed === "-1") {
+        return {
+          waiting: true,
+          channelId: THINGSPEAK_CHANNEL_ID,
+          telemetry: null,
+          source: `ESP32-S3 (ThingSpeak #${THINGSPEAK_CHANNEL_ID})`
+        };
+      }
+
+      // Channel 3559899 Fields:
+      // Field 1: Thermocouple Temperature (°C)
+      // Field 2: Pressure ADC Voltage (V)
+      // Field 3: Estimated Sensor Output Voltage (V)
+      // Field 4: Pressure MPa (1.6 MPa transducer: 1 MPa = 10 bar)
+      // Field 5: Auxiliary / Altitude / Field 5
+      // Field 6: Raw air-quality ADC
+      const tcTemp = parseSensorVal(feed.field1, -50, 1370);
+      const adcVolt = parseSensorVal(feed.field2, 0, 5);
+      const sensorVolt = parseSensorVal(feed.field3, 0, 5);
+      const pressMpa = parseSensorVal(feed.field4, -0.5, 50);
+      const field5Val = parseSensorVal(feed.field5, -1000, 100000);
       const mqAdc = parseSensorVal(feed.field6, 0, 10000);
+
+      const isConnected = (tcTemp !== null || pressMpa !== null);
+      const pressBar = pressMpa !== null ? Math.round(pressMpa * 10.0 * 10) / 10 : 10.0;
+      const pressPa = pressMpa !== null ? Math.round(pressMpa * 1000000.0) : 0;
       const entryId = feed.entry_id || 1;
       const createdAt = feed.created_at || new Date().toISOString();
       const dt = new Date(createdAt);
-
-      const isConnected = (dhtTemp !== null || bmpTemp !== null);
 
       return {
         telemetry: {
@@ -180,11 +197,11 @@
           time_display: !isNaN(dt.getTime()) ? dt.toLocaleTimeString() : new Date().toLocaleTimeString(),
           date_display: !isNaN(dt.getTime()) ? dt.toLocaleDateString() : new Date().toLocaleDateString(),
           suction_pressure: 1.5,
-          discharge_pressure: 10.0,
-          discharge_temperature: dhtTemp !== null ? Math.round((dhtTemp + 10.0) * 10) / 10 : null,
-          condenser_outlet_temp: dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : null,
-          evaporator_inlet_temp: dhtTemp !== null ? Math.round((dhtTemp - 15.0) * 10) / 10 : null,
-          evaporator_outlet_temp: dhtTemp !== null ? Math.round((dhtTemp - 5.0) * 10) / 10 : null,
+          discharge_pressure: pressBar,
+          discharge_temperature: tcTemp !== null ? Math.round(tcTemp * 10) / 10 : null,
+          condenser_outlet_temp: tcTemp !== null ? Math.round(tcTemp * 10) / 10 : null,
+          evaporator_inlet_temp: tcTemp !== null ? Math.round((tcTemp - 15.0) * 10) / 10 : null,
+          evaporator_outlet_temp: tcTemp !== null ? Math.round((tcTemp - 5.0) * 10) / 10 : null,
           compressor_status: isConnected ? "RUNNING" : "STANDBY",
           condenser_fan_status: isConnected ? "ACTIVE" : "IDLE",
           evaporator_fan_status: isConnected ? "ACTIVE" : "IDLE",
@@ -197,13 +214,16 @@
           vfd_frequency: isConnected ? 45.0 : 0.0,
           vav_position: 70.0,
           airflow_cfm: isConnected ? 850.0 : 0.0,
-          supply_air_temperature: dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : null,
-          return_air_temperature: bmpTemp !== null ? Math.round(bmpTemp * 10) / 10 : null,
-          supply_static_pressure: bmpPress !== null ? Math.round(bmpPress * 10) / 10 : null,
+          supply_air_temperature: tcTemp !== null ? Math.round(tcTemp * 10) / 10 : null,
+          return_air_temperature: tcTemp !== null ? Math.round(tcTemp * 10) / 10 : null,
+          supply_static_pressure: pressPa,
           set_temperature: 22.0,
-          dht_humidity: dhtHum,
-          bmp_altitude: bmpAlt,
-          field5: bmpAlt,
+          pressure_mpa: pressMpa,
+          adc_voltage: adcVolt,
+          sensor_voltage: sensorVolt,
+          dht_humidity: 50.0,
+          bmp_altitude: field5Val,
+          field5: field5Val,
           sensor_connected: isConnected,
           mq_air_quality: mqAdc,
           thingspeak_entry_id: entryId,
@@ -267,8 +287,34 @@
 
     async function pollAndRenderTelemetry(bannerEl, statusBadgeEl) {
       const data = await fetchLatestLiveTelemetry();
+      if (data && data.waiting) {
+        if (bannerEl) {
+          bannerEl.innerHTML = `<span class="nav-dot" style="background:#f59e0b; animation:pulse 1.5s infinite; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;"></span> <strong>THINGSPEAK ONLINE</strong> — Channel #${THINGSPEAK_CHANNEL_ID} (Thermocouple & Pressure Transducer) Connected | Awaiting first upload from ESP32...`;
+        }
+        if (statusBadgeEl) {
+          statusBadgeEl.innerHTML = `● <strong>Channel #${THINGSPEAK_CHANNEL_ID} Online</strong> — Awaiting live ESP32 upload...`;
+          statusBadgeEl.className = "db-status-badge saved";
+          statusBadgeEl.style.background = "#d97706";
+          statusBadgeEl.style.color = "#ffffff";
+        }
+        const alertBar = document.getElementById("ahuAlertBar") || document.getElementById("rfAlertBar");
+        if (alertBar) {
+          alertBar.hidden = false;
+          alertBar.style.display = "block";
+          alertBar.style.background = "#78350f";
+          alertBar.style.borderColor = "#f59e0b";
+          alertBar.style.color = "#fef3c7";
+          alertBar.style.padding = "8px 14px";
+          alertBar.style.borderRadius = "4px";
+          alertBar.style.marginBottom = "10px";
+          alertBar.style.fontSize = "12px";
+          alertBar.innerHTML = `📡 <strong>ThingSpeak Channel #${THINGSPEAK_CHANNEL_ID} Connected:</strong> ESP32-S3 (K-Type Thermocouple & 1.6 MPa Pressure Sensor) — API Keys Active. Waiting for initial sensor packet...`;
+        }
+        return;
+      }
+
       if (!data || !data.telemetry) {
-        if (bannerEl) bannerEl.textContent = "Connecting to live IoT feed / PostgreSQL buffer...";
+        if (bannerEl) bannerEl.textContent = `Connecting to ThingSpeak channel #${THINGSPEAK_CHANNEL_ID}...`;
         if (statusBadgeEl) {
           statusBadgeEl.textContent = "● Error reaching ThingSpeak (Check Network)";
           statusBadgeEl.className = "db-status-badge error";
