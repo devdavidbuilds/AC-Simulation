@@ -25,6 +25,7 @@
       "pvCondInTemp", "pvCondOutTemp",
       "pvExpInTemp", "pvExpOutTemp",
       "pvEvapInTemp", "pvEvapOutTemp",
+      "pvField5", "ahuField5",
       "eventLog",
       "svgDischargePressure", "svgDischargeTemp", "svgSuctionPressure",
       "svgCondenserOutletTemp", "svgEvaporatorInletTemp", "svgEvaporatorOutletTemp",
@@ -346,23 +347,45 @@
     if (el.valCapillary) el.valCapillary.textContent = capActive ? (fl.capillary ? "FAULT" : "METERING") : "IDLE";
     if (el.lampCapillary) setLamp(el.lampCapillary, capActive ? (fl.capillary ? "alarm" : "cool") : "");
 
-    // ---- Live parameters (Values ALWAYS show the historical record's numbers) ----
-    if (el.pvSuctionP) el.pvSuctionP.textContent = s.suctionPressure.toFixed(1) + " bar";
-    if (el.pvDischargeP) el.pvDischargeP.textContent = s.dischargePressure.toFixed(1) + " bar";
-    if (el.pvCompSucTemp) el.pvCompSucTemp.textContent = (s.evaporatorOutletTemp !== undefined ? s.evaporatorOutletTemp.toFixed(1) : "24.0") + " °C";
-    if (el.pvCompDisTemp) el.pvCompDisTemp.textContent = s.dischargeTemp.toFixed(1) + " °C";
+    // ---- Live parameters (Values ALWAYS show real sensor data or N/C when unplugged) ----
+    if (el.pvSuctionP) el.pvSuctionP.textContent = s.suctionPressure !== null && s.suctionPressure !== undefined ? s.suctionPressure.toFixed(1) + " bar" : "-- bar";
+    if (el.pvDischargeP) el.pvDischargeP.textContent = s.dischargePressure !== null && s.dischargePressure !== undefined ? s.dischargePressure.toFixed(1) + " bar" : "-- bar";
+
+    // Compressor Temperatures
+    if (el.pvCompSucTemp) {
+      if (s.field5 !== null && s.field5 !== undefined) {
+        el.pvCompSucTemp.textContent = s.field5 + " °C";
+      } else if (s.evaporatorOutletTemp !== null && s.evaporatorOutletTemp !== undefined) {
+        el.pvCompSucTemp.textContent = s.evaporatorOutletTemp.toFixed(1) + " °C";
+      } else {
+        el.pvCompSucTemp.textContent = "-- °C";
+      }
+    }
+    if (el.pvCompDisTemp) {
+      if (s.dischargeTemp !== null && s.dischargeTemp !== undefined) {
+        el.pvCompDisTemp.textContent = s.dischargeTemp.toFixed(1) + " °C";
+        el.pvCompDisTemp.style.color = "";
+      } else {
+        el.pvCompDisTemp.textContent = "-- °C (N/C)";
+        el.pvCompDisTemp.style.color = "#ef4444";
+      }
+    }
 
     // Condenser
-    if (el.pvCondInTemp) el.pvCondInTemp.textContent = s.dischargeTemp.toFixed(1) + " °C";
-    if (el.pvCondOutTemp) el.pvCondOutTemp.textContent = s.condenserOutletTemp.toFixed(1) + " °C";
+    if (el.pvCondInTemp) el.pvCondInTemp.textContent = s.dischargeTemp !== null && s.dischargeTemp !== undefined ? s.dischargeTemp.toFixed(1) + " °C" : "-- °C (N/C)";
+    if (el.pvCondOutTemp) el.pvCondOutTemp.textContent = s.condenserOutletTemp !== null && s.condenserOutletTemp !== undefined ? s.condenserOutletTemp.toFixed(1) + " °C" : "-- °C (N/C)";
 
     // Expansion Valve (Capillary Tube)
-    if (el.pvExpInTemp) el.pvExpInTemp.textContent = s.condenserOutletTemp.toFixed(1) + " °C";
-    if (el.pvExpOutTemp) el.pvExpOutTemp.textContent = s.evaporatorInletTemp.toFixed(1) + " °C";
+    if (el.pvExpInTemp) el.pvExpInTemp.textContent = s.condenserOutletTemp !== null && s.condenserOutletTemp !== undefined ? s.condenserOutletTemp.toFixed(1) + " °C" : "-- °C (N/C)";
+    if (el.pvExpOutTemp) el.pvExpOutTemp.textContent = s.evaporatorInletTemp !== null && s.evaporatorInletTemp !== undefined ? s.evaporatorInletTemp.toFixed(1) + " °C" : "-- °C (N/C)";
 
     // Evaporator
-    if (el.pvEvapInTemp) el.pvEvapInTemp.textContent = s.evaporatorInletTemp.toFixed(1) + " °C";
-    if (el.pvEvapOutTemp) el.pvEvapOutTemp.textContent = s.evaporatorOutletTemp.toFixed(1) + " °C";
+    if (el.pvEvapInTemp) el.pvEvapInTemp.textContent = s.evaporatorInletTemp !== null && s.evaporatorInletTemp !== undefined ? s.evaporatorInletTemp.toFixed(1) + " °C" : "-- °C (N/C)";
+    if (el.pvEvapOutTemp) el.pvEvapOutTemp.textContent = s.evaporatorOutletTemp !== null && s.evaporatorOutletTemp !== undefined ? s.evaporatorOutletTemp.toFixed(1) + " °C" : "-- °C (N/C)";
+
+    // Field 5 / Auxiliary Sensor
+    if (el.pvField5) el.pvField5.textContent = s.field5 !== null && s.field5 !== undefined ? s.field5 : "--";
+    if (el.ahuField5) el.ahuField5.textContent = s.field5 !== null && s.field5 !== undefined ? s.field5 : "--";
 
     // ---- AHU / BMS process and actuator layer ----
     const valve = Math.round(s.valveOpening || 60);
@@ -373,14 +396,36 @@
     const ahuRunning = s.fanOn && s.vfdFrequency > 0;
     const fanStatus = s.fanOn ? "ON" : "OFF";
 
-    if (el.ahuReturnTemp) el.ahuReturnTemp.textContent = s.returnAirTemperature.toFixed(1) + " °C";
+    if (el.ahuReturnTemp) {
+      if (s.returnAirTemperature !== null && s.returnAirTemperature !== undefined) {
+        el.ahuReturnTemp.textContent = s.returnAirTemperature.toFixed(1) + " °C";
+        el.ahuReturnTemp.style.color = "";
+      } else {
+        el.ahuReturnTemp.textContent = "-- °C (N/C)";
+        el.ahuReturnTemp.style.color = "#ef4444";
+      }
+    }
     if (el.ahuValveCmd) el.ahuValveCmd.textContent = valve + " %";
     if (el.ahuValveCmd2) el.ahuValveCmd2.textContent = valve + " %";
     if (el.ahuValveStatus) el.ahuValveStatus.textContent = valveState;
-    if (el.ahuCfm) el.ahuCfm.textContent = Math.round(s.airflowCfm) + " CFM";
-    if (el.ahuSupplyTemp) el.ahuSupplyTemp.textContent = s.supplyAirTemperature.toFixed(1) + " °C";
-    if (el.ahuSupplyTemp2) el.ahuSupplyTemp2.textContent = s.supplyAirTemperature.toFixed(1) + " °C";
-    if (el.ahuStaticPressure) el.ahuStaticPressure.textContent = Math.round(s.supplyStaticPressure) + " Pa";
+    if (el.ahuCfm) el.ahuCfm.textContent = Math.round(s.airflowCfm || 0) + " CFM";
+    if (el.ahuSupplyTemp) {
+      if (s.supplyAirTemperature !== null && s.supplyAirTemperature !== undefined) {
+        el.ahuSupplyTemp.textContent = s.supplyAirTemperature.toFixed(1) + " °C";
+        el.ahuSupplyTemp.style.color = "";
+      } else {
+        el.ahuSupplyTemp.textContent = "-- °C (N/C)";
+        el.ahuSupplyTemp.style.color = "#ef4444";
+      }
+    }
+    if (el.ahuSupplyTemp2) {
+      if (s.supplyAirTemperature !== null && s.supplyAirTemperature !== undefined) {
+        el.ahuSupplyTemp2.textContent = s.supplyAirTemperature.toFixed(1) + " °C";
+      } else {
+        el.ahuSupplyTemp2.textContent = "-- °C (N/C)";
+      }
+    }
+    if (el.ahuStaticPressure) el.ahuStaticPressure.textContent = s.supplyStaticPressure !== null && s.supplyStaticPressure !== undefined ? Math.round(s.supplyStaticPressure) + " Pa" : "-- Pa";
     if (el.ahuVfdHz2) el.ahuVfdHz2.textContent = s.vfdFrequency.toFixed(1) + " Hz";
     if (el.ahuSupplyFilter) el.ahuSupplyFilter.textContent = "NORMAL";
 

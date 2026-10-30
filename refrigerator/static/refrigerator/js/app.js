@@ -146,17 +146,32 @@
     const dbSaveStatus = document.getElementById("dbSaveStatus");
     const btnToggleIotFeed = document.getElementById("btnToggleIotFeed");
 
+    function parseSensorVal(raw, minV, maxV) {
+      if (raw === null || raw === undefined) return null;
+      const s = String(raw).trim().toLowerCase();
+      if (s === "" || s === "null" || s === "nan" || s === "none" || s === "-127" || s === "-127.0" || s === "ovf") {
+        return null;
+      }
+      const n = parseFloat(s);
+      if (isNaN(n)) return null;
+      if (minV !== undefined && n < minV) return null;
+      if (maxV !== undefined && n > maxV) return null;
+      return n;
+    }
+
     function mapThingSpeakFeedToPayload(feed) {
       if (!feed || feed === -1) return null;
-      const dhtTemp = parseFloat(feed.field1) || 29.8;
-      const dhtHum = parseFloat(feed.field2) || 60.8;
-      const bmpTemp = parseFloat(feed.field3) || 29.6;
-      const bmpPress = parseFloat(feed.field4) || 1007.0;
-      const bmpAlt = parseFloat(feed.field5) || 2180.0;
-      const mqAdc = parseFloat(feed.field6) || 43.4;
-      const entryId = feed.entry_id || 15;
+      const dhtTemp = parseSensorVal(feed.field1, -40, 120);
+      const dhtHum = parseSensorVal(feed.field2, 0, 100);
+      const bmpTemp = parseSensorVal(feed.field3, -40, 120);
+      const bmpPress = parseSensorVal(feed.field4, 0, 2000);
+      const bmpAlt = parseSensorVal(feed.field5, -1000, 100000);
+      const mqAdc = parseSensorVal(feed.field6, 0, 10000);
+      const entryId = feed.entry_id || 1;
       const createdAt = feed.created_at || new Date().toISOString();
       const dt = new Date(createdAt);
+
+      const isConnected = (dhtTemp !== null || bmpTemp !== null);
 
       return {
         telemetry: {
@@ -166,28 +181,30 @@
           date_display: !isNaN(dt.getTime()) ? dt.toLocaleDateString() : new Date().toLocaleDateString(),
           suction_pressure: 1.5,
           discharge_pressure: 10.0,
-          discharge_temperature: Math.round((dhtTemp + 10.0) * 10) / 10,
-          condenser_outlet_temp: Math.round(dhtTemp * 10) / 10,
-          evaporator_inlet_temp: Math.round((dhtTemp - 15.0) * 10) / 10,
-          evaporator_outlet_temp: Math.round((dhtTemp - 5.0) * 10) / 10,
-          compressor_status: "RUNNING",
-          condenser_fan_status: "ACTIVE",
-          evaporator_fan_status: "ACTIVE",
-          system_status: "RUNNING",
-          fault_type: "None",
+          discharge_temperature: dhtTemp !== null ? Math.round((dhtTemp + 10.0) * 10) / 10 : null,
+          condenser_outlet_temp: dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : null,
+          evaporator_inlet_temp: dhtTemp !== null ? Math.round((dhtTemp - 15.0) * 10) / 10 : null,
+          evaporator_outlet_temp: dhtTemp !== null ? Math.round((dhtTemp - 5.0) * 10) / 10 : null,
+          compressor_status: isConnected ? "RUNNING" : "STANDBY",
+          condenser_fan_status: isConnected ? "ACTIVE" : "IDLE",
+          evaporator_fan_status: isConnected ? "ACTIVE" : "IDLE",
+          system_status: isConnected ? "RUNNING" : "SENSOR_DISCONNECTED",
+          fault_type: isConnected ? "None" : "Temperature Sensor Disconnected",
           valve_opening: 60.0,
           heating_valve_command: 40.0,
           damper_position: 70.0,
-          fan_on: true,
-          vfd_frequency: 45.0,
+          fan_on: isConnected,
+          vfd_frequency: isConnected ? 45.0 : 0.0,
           vav_position: 70.0,
-          airflow_cfm: 850.0,
-          supply_air_temperature: Math.round(dhtTemp * 10) / 10,
-          return_air_temperature: Math.round(bmpTemp * 10) / 10,
-          supply_static_pressure: Math.round(bmpPress * 10) / 10,
+          airflow_cfm: isConnected ? 850.0 : 0.0,
+          supply_air_temperature: dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : null,
+          return_air_temperature: bmpTemp !== null ? Math.round(bmpTemp * 10) / 10 : null,
+          supply_static_pressure: bmpPress !== null ? Math.round(bmpPress * 10) / 10 : null,
           set_temperature: 22.0,
           dht_humidity: dhtHum,
           bmp_altitude: bmpAlt,
+          field5: bmpAlt,
+          sensor_connected: isConnected,
           mq_air_quality: mqAdc,
           thingspeak_entry_id: entryId,
           hardware_source: `ESP32-S3 (ThingSpeak #${THINGSPEAK_CHANNEL_ID})`
@@ -268,44 +285,69 @@
       state.heatingValveCommand = rec.heating_valve_command !== undefined ? Number(rec.heating_valve_command) : 40.0;
       state.dhtHumidity = rec.dht_humidity;
       state.bmpAltitude = rec.bmp_altitude;
+      state.field5 = rec.field5 !== undefined ? rec.field5 : rec.bmp_altitude;
+      state.sensorConnected = rec.sensor_connected !== undefined ? rec.sensor_connected : (rec.supply_air_temperature !== null);
+      state.supplyAirTemperature = rec.supply_air_temperature;
+      state.returnAirTemperature = rec.return_air_temperature;
+      state.dischargeTemp = rec.discharge_temperature;
+      state.supplyStaticPressure = rec.supply_static_pressure;
       state.mqAirQuality = rec.mq_air_quality;
 
       const timeStr = rec.time_display || new Date().toLocaleTimeString();
-      const humText = rec.dht_humidity !== undefined ? ` | Humidity: ${rec.dht_humidity}%` : "";
-      const mqText = rec.mq_air_quality !== undefined ? ` | AQ: ${rec.mq_air_quality}` : "";
+      const humText = rec.dht_humidity !== null && rec.dht_humidity !== undefined ? ` | Humidity: ${rec.dht_humidity}%` : "";
+      const f5Text = state.field5 !== null && state.field5 !== undefined ? ` | Field 5: ${state.field5}` : "";
       const entryText = data.entryId ? ` [Entry #${data.entryId}]` : "";
+      const isConnected = state.sensorConnected && rec.supply_air_temperature !== null;
 
-      const logMsg = `Live IoT Telemetry received from ${data.source}${entryText} — Supply Temp: ${rec.supply_air_temperature}°C, Pressure: ${rec.supply_static_pressure || rec.discharge_pressure} Pa/bar${humText}`;
+      const logMsg = isConnected
+        ? `Live IoT Telemetry received from ${data.source}${entryText} — Supply Temp: ${rec.supply_air_temperature}°C, Pressure: ${rec.supply_static_pressure || "--"} hPa${humText}${f5Text}`
+        : `[WARNING] Sensor Disconnected / No Data (Field 1: null) from ${data.source}${entryText}${f5Text}`;
 
       UI.renderAll(state, [{
         time: timeStr,
         message: logMsg,
-        severity: "ok"
+        severity: isConnected ? "ok" : "err"
       }]);
 
       const alertBar = document.getElementById("ahuAlertBar") || document.getElementById("rfAlertBar");
       if (alertBar) {
         alertBar.hidden = false;
         alertBar.style.display = "block";
-        alertBar.style.background = "#064e3b";
-        alertBar.style.borderColor = "#10b981";
-        alertBar.style.color = "#ecfdf5";
         alertBar.style.padding = "8px 14px";
         alertBar.style.borderRadius = "4px";
         alertBar.style.marginBottom = "10px";
         alertBar.style.fontSize = "12px";
-        alertBar.innerHTML = `<strong>📡 ThingSpeak Live IoT Sync:</strong> Entry #${data.entryId} (Recorded: ${rec.date_display} ${rec.time_display}) &nbsp;|&nbsp; <strong>DHT22 Temp:</strong> ${rec.supply_air_temperature}°C &nbsp;|&nbsp; <strong>Humidity:</strong> ${rec.dht_humidity}% &nbsp;|&nbsp; <strong>BMP280 Temp:</strong> ${rec.return_air_temperature}°C &nbsp;|&nbsp; <strong>Pressure:</strong> ${rec.supply_static_pressure} hPa &nbsp;|&nbsp; <strong>MQ-135:</strong> ${rec.mq_air_quality} ADC`;
+
+        if (!isConnected) {
+          alertBar.style.background = "#7f1d1d";
+          alertBar.style.borderColor = "#ef4444";
+          alertBar.style.color = "#fee2e2";
+          alertBar.innerHTML = `⚠️ <strong>TEMPERATURE SENSOR NOT CONNECTED:</strong> Field 1 reported no signal / disconnected! &nbsp;|&nbsp; <strong>Field 5 (Alt/Aux):</strong> <span style="background:#991b1b; padding:2px 6px; border-radius:3px; font-weight:bold;">${state.field5 ?? "--"}</span> &nbsp;|&nbsp; <strong>Pressure:</strong> ${rec.supply_static_pressure ?? "--"} hPa &nbsp;|&nbsp; <em>Check sensor wiring on ESP32</em>`;
+        } else {
+          alertBar.style.background = "#064e3b";
+          alertBar.style.borderColor = "#10b981";
+          alertBar.style.color = "#ecfdf5";
+          alertBar.innerHTML = `<strong>📡 ThingSpeak Live IoT Sync:</strong> Entry #${data.entryId} (Recorded: ${rec.date_display} ${rec.time_display}) &nbsp;|&nbsp; <strong>Temp (F1):</strong> ${rec.supply_air_temperature}°C &nbsp;|&nbsp; <strong>Humidity (F2):</strong> ${rec.dht_humidity ?? "--"}% &nbsp;|&nbsp; <strong>Pressure (F4):</strong> ${rec.supply_static_pressure ?? "--"} hPa &nbsp;|&nbsp; <strong>Field 5 (Alt/Aux):</strong> <span style="background:#047857; padding:2px 6px; border-radius:3px; font-weight:bold;">${state.field5 ?? "--"}</span>`;
+        }
       }
 
       if (bannerEl) {
-        bannerEl.innerHTML = `<span class="nav-dot" style="background:#2ecc71; animation:pulse 1.5s infinite; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;"></span> <strong>LIVE IOT ACTIVE</strong> — ${data.source}${entryText} | Temp: ${rec.supply_air_temperature}°C${humText} | Last Sync: ${timeStr}`;
+        const tempDisp = isConnected ? `${rec.supply_air_temperature}°C` : `<span style="color:#fca5a5; font-weight:bold;">[DISCONNECTED]</span>`;
+        bannerEl.innerHTML = `<span class="nav-dot" style="background:${isConnected ? '#2ecc71' : '#ef4444'}; animation:pulse 1.5s infinite; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px;"></span> <strong>LIVE IOT ACTIVE</strong> — ${data.source}${entryText} | Temp: ${tempDisp}${humText}${f5Text} | Last Sync: ${timeStr}`;
       }
 
       if (statusBadgeEl) {
-        statusBadgeEl.innerHTML = `● <strong>ThingSpeak Online</strong> [Entry #${data.entryId}] — ${rec.supply_air_temperature}°C | ${rec.dht_humidity}% Hum | ${rec.supply_static_pressure} hPa`;
-        statusBadgeEl.className = "db-status-badge saved";
-        statusBadgeEl.style.background = "#059669";
-        statusBadgeEl.style.color = "#ffffff";
+        if (!isConnected) {
+          statusBadgeEl.innerHTML = `● <strong>ThingSpeak Online</strong> [Entry #${data.entryId}] — ⚠️ <span style="color:#fecaca;">TEMP SENSOR NOT CONNECTED</span> | F5: ${state.field5 ?? "--"}`;
+          statusBadgeEl.className = "db-status-badge error";
+          statusBadgeEl.style.background = "#991b1b";
+          statusBadgeEl.style.color = "#ffffff";
+        } else {
+          statusBadgeEl.innerHTML = `● <strong>ThingSpeak Online</strong> [Entry #${data.entryId}] — ${rec.supply_air_temperature}°C | ${rec.dht_humidity ?? "--"}% Hum | ${rec.supply_static_pressure ?? "--"} hPa | <strong>F5: ${state.field5 ?? "--"}</strong>`;
+          statusBadgeEl.className = "db-status-badge saved";
+          statusBadgeEl.style.background = "#059669";
+          statusBadgeEl.style.color = "#ffffff";
+        }
       }
     }
 

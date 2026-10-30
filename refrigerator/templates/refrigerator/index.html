@@ -57,12 +57,13 @@
         <div class="ahu-bms-grid">
           <div class="ahu-main-card">
             <div class="ahu-instrument-strip">
-              <div class="ahu-instrument"><span>RETURN AIR TEMP.</span><strong id="ahuReturnTemp">24.0 Â°C</strong></div>
+              <div class="ahu-instrument"><span>RETURN AIR TEMP.</span><strong id="ahuReturnTemp">24.0 °C</strong></div>
               <div class="ahu-instrument"><span>COOLING VALVE CMD</span><strong id="ahuValveCmd">60 %</strong></div>
               <div class="ahu-instrument"><span>COOLING VALVE STS</span><strong id="ahuValveStatus">OPEN</strong></div>
               <div class="ahu-instrument"><span>AIR FLOW STS</span><strong id="ahuCfm">0 CFM</strong></div>
-              <div class="ahu-instrument"><span>SUPPLY AIR TEMP.</span><strong id="ahuSupplyTemp">24.0 Â°C</strong></div>
+              <div class="ahu-instrument"><span>SUPPLY AIR TEMP.</span><strong id="ahuSupplyTemp">24.0 °C</strong></div>
               <div class="ahu-instrument"><span>SUPPLY STATIC PRESSURE</span><strong id="ahuStaticPressure">0 Pa</strong></div>
+              <div class="ahu-instrument" style="background:#064e3b; color:#ecfdf5;"><span style="color:#6ee7b7;">FIELD 5 (ALT / AUX)</span><strong id="ahuField5" style="color:#a7f3d0;">--</strong></div>
             </div>
 
             <div id="ahuAlertBar" class="ahu-alert-bar" role="alert" aria-live="polite" hidden></div>
@@ -754,11 +755,17 @@
         <!-- 4. Evaporator -->
         <div class="param-box blue">
           <div class="param-label">Evaporator Inlet Temp.</div>
-          <div class="param-value" id="pvEvapInTemp">24.0 Â°C</div>
+          <div class="param-value" id="pvEvapInTemp">24.0 °C</div>
         </div>
         <div class="param-box blue">
           <div class="param-label">Evaporator Outlet Temp.</div>
-          <div class="param-value" id="pvEvapOutTemp">24.0 Â°C</div>
+          <div class="param-value" id="pvEvapOutTemp">24.0 °C</div>
+        </div>
+
+        <!-- 5. Field 5 / Auxiliary Sensor -->
+        <div class="param-box" style="grid-column: span 2; border: 1px solid #059669;">
+          <div class="param-label" style="background:#064e3b; color:#a7f3d0;">Field 5 (Altitude / Aux Sensor)</div>
+          <div class="param-value" id="pvField5" style="color:#34d399;">--</div>
         </div>
       </div>
     </section>
