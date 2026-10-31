@@ -251,29 +251,33 @@ def get_thingspeak_telemetry(request):
             except (ValueError, TypeError):
                 return None
 
-        # Channel 3560538 Fields (ESP32 Temperature Monitoring System):
-        # Field 1: Thermocouple 1 (°C) -> Compressor Discharge Temp / Condenser Inlet Temp
-        # Field 2: Thermocouple 2 (°C) -> Condenser Outlet Temp / Expansion Valve Inlet Temp
-        # Field 3: Thermocouple 3 (°C) -> Expansion Valve Outlet Temp / Evaporator Inlet Temp
-        # Field 4: Thermocouple 4 (°C) -> Evaporator Outlet Temp / Compressor Suction Temp
-        # Field 5: DHT22 Temperature (°C) -> Ambient / Return Air Temp
-        # Field 6: DHT22 Humidity (%) -> Ambient / Return Air RH
-        tc1 = parse_sensor_val(data.get('field1'), -50.0, 1370.0)
-        tc2 = parse_sensor_val(data.get('field2'), -50.0, 1370.0)
-        tc3 = parse_sensor_val(data.get('field3'), -50.0, 1370.0)
-        tc4 = parse_sensor_val(data.get('field4'), -50.0, 1370.0)
-        dht_temp = parse_sensor_val(data.get('field5'), -40.0, 120.0)
-        dht_humidity = parse_sensor_val(data.get('field6'), 0.0, 100.0)
+        # Channel 3560538 Exact Input Fields:
+        # Field 1: COMP OUT/ COND IN   -> Compressor Discharge / Condenser Inlet Temp (°C)
+        # Field 2: COMP IN / EVAP OUT  -> Compressor Suction / Evaporator Outlet Temp (°C)
+        # Field 3: CT IN / COND OUT    -> Condenser Outlet / Expansion Valve Inlet Temp (°C)
+        # Field 4: WATER EVAP          -> Water Evaporator Temp (°C)
+        # Field 5: CT OUT / EVAP IN    -> Expansion Valve Outlet / Evaporator Inlet Temp (°C)
+        # Field 6: DHT22 Humidity      -> Relative Humidity (%)
+        f1_comp_out_cond_in = parse_sensor_val(data.get('field1'), -50.0, 1370.0)
+        f2_comp_in_evap_out = parse_sensor_val(data.get('field2'), -50.0, 1370.0)
+        f3_ct_in_cond_out = parse_sensor_val(data.get('field3'), -50.0, 1370.0)
+        f4_water_evap = parse_sensor_val(data.get('field4'), -50.0, 1370.0)
+        f5_ct_out_evap_in = parse_sensor_val(data.get('field5'), -50.0, 1370.0)
+        f6_humidity = parse_sensor_val(data.get('field6'), 0.0, 100.0)
 
-        sensor_connected = any(v is not None for v in (tc1, tc2, tc3, tc4, dht_temp))
+        sensor_connected = any(v is not None for v in (
+            f1_comp_out_cond_in, f2_comp_in_evap_out, f3_ct_in_cond_out,
+            f4_water_evap, f5_ct_out_evap_in, f6_humidity
+        ))
 
-        # Sensor readings with realistic engineering defaults if any individual probe is disconnected
-        t_discharge = round(tc1, 1) if tc1 is not None else 41.2
-        t_cond_out = round(tc2, 1) if tc2 is not None else 31.2
-        t_evap_in = round(tc3, 1) if tc3 is not None else 16.2
-        t_evap_out = round(tc4, 1) if tc4 is not None else 26.2
-        t_ambient = round(dht_temp, 1) if dht_temp is not None else 28.8
-        rh_ambient = round(dht_humidity, 1) if dht_humidity is not None else 86.0
+        # Sensor readings mapping with fallback defaults
+        t_discharge = round(f1_comp_out_cond_in, 1) if f1_comp_out_cond_in is not None else 32.5
+        t_cond_out = round(f3_ct_in_cond_out, 1) if f3_ct_in_cond_out is not None else 32.8
+        t_evap_in = round(f5_ct_out_evap_in, 1) if f5_ct_out_evap_in is not None else 24.0
+        t_evap_out = round(f2_comp_in_evap_out, 1) if f2_comp_in_evap_out is not None else 15.0
+        t_water_evap_out = round(f4_water_evap, 1) if f4_water_evap is not None else 14.2
+        t_water_evap_in = round(f4_water_evap + 5.0, 1) if f4_water_evap is not None else 19.2
+        rh_val = round(f6_humidity, 1) if f6_humidity is not None else 50.0
 
         # Normal thermodynamic operating pressures for R134a refrigeration cycle
         press_bar = 10.5
@@ -300,9 +304,9 @@ def get_thingspeak_telemetry(request):
                     condenser_outlet_temp=t_cond_out if sensor_connected else 24.0,
                     evaporator_inlet_temp=t_evap_in if sensor_connected else 24.0,
                     evaporator_outlet_temp=t_evap_out if sensor_connected else 24.0,
-                    water_evaporator=round(max(6.0, t_evap_in - 2.0), 1) if sensor_connected else 14.2,
-                    water_evaporator_inlet=round(max(10.0, t_evap_out - 7.0), 1) if sensor_connected else 19.2,
-                    water_evaporator_outlet=round(max(6.0, t_evap_in - 2.0), 1) if sensor_connected else 14.2,
+                    water_evaporator=t_water_evap_out if sensor_connected else 14.2,
+                    water_evaporator_inlet=t_water_evap_in if sensor_connected else 19.2,
+                    water_evaporator_outlet=t_water_evap_out if sensor_connected else 14.2,
                     compressor_status="RUNNING" if sensor_connected else "STANDBY",
                     condenser_fan_status="ACTIVE" if sensor_connected else "IDLE",
                     evaporator_fan_status="ACTIVE" if sensor_connected else "IDLE",
@@ -315,7 +319,7 @@ def get_thingspeak_telemetry(request):
                     vav_position=70.0,
                     airflow_cfm=850.0 if sensor_connected else 0.0,
                     supply_air_temperature=t_evap_out if sensor_connected else 24.0,
-                    return_air_temperature=t_ambient if sensor_connected else 24.0,
+                    return_air_temperature=24.0,
                     supply_static_pressure=round(duct_static_pa, 1),
                     set_temperature=22.0,
                 )
@@ -332,9 +336,9 @@ def get_thingspeak_telemetry(request):
                 "condenser_outlet_temp": t_cond_out if sensor_connected else None,
                 "evaporator_inlet_temp": t_evap_in if sensor_connected else None,
                 "evaporator_outlet_temp": t_evap_out if sensor_connected else None,
-                "water_evaporator": 14.2,
-                "water_evaporator_inlet": 19.2,
-                "water_evaporator_outlet": 14.2,
+                "water_evaporator": t_water_evap_out,
+                "water_evaporator_inlet": t_water_evap_in,
+                "water_evaporator_outlet": t_water_evap_out,
                 "compressor_status": "RUNNING" if sensor_connected else "STANDBY",
                 "condenser_fan_status": "ACTIVE" if sensor_connected else "IDLE",
                 "evaporator_fan_status": "ACTIVE" if sensor_connected else "IDLE",
@@ -347,30 +351,31 @@ def get_thingspeak_telemetry(request):
                 "vav_position": 70.0,
                 "airflow_cfm": 850.0 if sensor_connected else 0.0,
                 "supply_air_temperature": t_evap_out if sensor_connected else None,
-                "return_air_temperature": t_ambient if sensor_connected else None,
+                "return_air_temperature": 24.0,
                 "supply_static_pressure": round(duct_static_pa, 1),
                 "set_temperature": 22.0,
                 "db_status": f"Warning: DB sync skipped ({str(db_err)})",
             }
 
         payload['supply_air_temperature'] = t_evap_out if sensor_connected else None
-        payload['return_air_temperature'] = t_ambient if sensor_connected else None
+        payload['return_air_temperature'] = 24.0
         payload['discharge_temperature'] = t_discharge if sensor_connected else None
         payload['condenser_outlet_temp'] = t_cond_out if sensor_connected else None
         payload['evaporator_inlet_temp'] = t_evap_in if sensor_connected else None
         payload['evaporator_outlet_temp'] = t_evap_out if sensor_connected else None
-        payload['water_evaporator_inlet'] = 19.2
-        payload['water_evaporator_outlet'] = 14.2
-        payload['water_evaporator'] = 14.2
+        payload['water_evaporator_inlet'] = t_water_evap_in if sensor_connected else 19.2
+        payload['water_evaporator_outlet'] = t_water_evap_out if sensor_connected else 14.2
+        payload['water_evaporator'] = t_water_evap_out if sensor_connected else 14.2
         payload['discharge_pressure'] = press_bar
         payload['suction_pressure'] = suction_p
-        payload['dht_temp'] = t_ambient
-        payload['dht_humidity'] = rh_ambient
-        payload['field1_tc1'] = tc1
-        payload['field2_tc2'] = tc2
-        payload['field3_tc3'] = tc3
-        payload['field4_tc4'] = tc4
-        payload['field5'] = t_ambient
+        payload['dht_humidity'] = rh_val
+        payload['field1_comp_out_cond_in'] = f1_comp_out_cond_in
+        payload['field2_comp_in_evap_out'] = f2_comp_in_evap_out
+        payload['field3_ct_in_cond_out'] = f3_ct_in_cond_out
+        payload['field4_water_evap'] = f4_water_evap
+        payload['field5_ct_out_evap_in'] = f5_ct_out_evap_in
+        payload['field6_humidity'] = f6_humidity
+        payload['field5'] = f5_ct_out_evap_in
         payload['sensor_connected'] = sensor_connected
         payload['thingspeak_entry_id'] = entry_id
         payload['hardware_source'] = f"ESP32-S3 (ThingSpeak #{THINGSPEAK_CHANNEL_ID})"

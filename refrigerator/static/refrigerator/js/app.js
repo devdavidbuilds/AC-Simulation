@@ -175,31 +175,32 @@
         };
       }
 
-      // Channel 3560538 Fields (ESP32 Temperature Monitoring System):
-      // Field 1: Thermocouple 1 (°C) -> Compressor Discharge Temp / Condenser Inlet Temp
-      // Field 2: Thermocouple 2 (°C) -> Condenser Outlet Temp / Expansion Valve Inlet Temp
-      // Field 3: Thermocouple 3 (°C) -> Expansion Valve Outlet Temp / Evaporator Inlet Temp
-      // Field 4: Thermocouple 4 (°C) -> Evaporator Outlet Temp / Compressor Suction Temp
-      // Field 5: DHT22 Temperature (°C) -> Ambient / Return Air Temp
-      // Field 6: DHT22 Humidity (%) -> Ambient / Return Air RH
-      const tc1 = parseSensorVal(feed.field1, -50, 1370);
-      const tc2 = parseSensorVal(feed.field2, -50, 1370);
-      const tc3 = parseSensorVal(feed.field3, -50, 1370);
-      const tc4 = parseSensorVal(feed.field4, -50, 1370);
-      const dhtTemp = parseSensorVal(feed.field5, -40, 120);
-      const dhtHum = parseSensorVal(feed.field6, 0, 100);
+      // Channel 3560538 Exact Input Fields:
+      // Field 1: COMP OUT/ COND IN   -> Compressor Discharge / Condenser Inlet Temp (°C)
+      // Field 2: COMP IN / EVAP OUT  -> Compressor Suction / Evaporator Outlet Temp (°C)
+      // Field 3: CT IN / COND OUT    -> Condenser Outlet / Expansion Valve Inlet Temp (°C)
+      // Field 4: WATER EVAP          -> Water Evaporator Temp (°C)
+      // Field 5: CT OUT / EVAP IN    -> Expansion Valve Outlet / Evaporator Inlet Temp (°C)
+      // Field 6: DHT22 Humidity      -> Relative Humidity (%)
+      const f1CompOutCondIn = parseSensorVal(feed.field1, -50, 1370);
+      const f2CompInEvapOut = parseSensorVal(feed.field2, -50, 1370);
+      const f3CtInCondOut = parseSensorVal(feed.field3, -50, 1370);
+      const f4WaterEvap = parseSensorVal(feed.field4, -50, 1370);
+      const f5CtOutEvapIn = parseSensorVal(feed.field5, -50, 1370);
+      const f6Humidity = parseSensorVal(feed.field6, 0, 100);
       const entryId = feed.entry_id || 1;
       const createdAt = feed.created_at || new Date().toISOString();
       const dt = new Date(createdAt);
 
-      const isConnected = (tc1 !== null || tc2 !== null || tc3 !== null || tc4 !== null || dhtTemp !== null);
+      const isConnected = (f1CompOutCondIn !== null || f2CompInEvapOut !== null || f3CtInCondOut !== null || f4WaterEvap !== null || f5CtOutEvapIn !== null || f6Humidity !== null);
 
-      const tDischarge = tc1 !== null ? Math.round(tc1 * 10) / 10 : 41.2;
-      const tCondOut = tc2 !== null ? Math.round(tc2 * 10) / 10 : 31.2;
-      const tEvapIn = tc3 !== null ? Math.round(tc3 * 10) / 10 : 16.2;
-      const tEvapOut = tc4 !== null ? Math.round(tc4 * 10) / 10 : 26.2;
-      const tAmbient = dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : 28.8;
-      const rhAmbient = dhtHum !== null ? Math.round(dhtHum * 10) / 10 : 86.0;
+      const tDischarge = f1CompOutCondIn !== null ? Math.round(f1CompOutCondIn * 10) / 10 : 32.5;
+      const tCondOut = f3CtInCondOut !== null ? Math.round(f3CtInCondOut * 10) / 10 : 32.8;
+      const tEvapIn = f5CtOutEvapIn !== null ? Math.round(f5CtOutEvapIn * 10) / 10 : 24.0;
+      const tEvapOut = f2CompInEvapOut !== null ? Math.round(f2CompInEvapOut * 10) / 10 : 15.0;
+      const tWaterOut = f4WaterEvap !== null ? Math.round(f4WaterEvap * 10) / 10 : 14.2;
+      const tWaterIn = f4WaterEvap !== null ? Math.round((f4WaterEvap + 5.0) * 10) / 10 : 19.2;
+      const rhVal = f6Humidity !== null ? Math.round(f6Humidity * 10) / 10 : 50.0;
 
       const pressBar = 10.5;
       const suctionP = 1.5;
@@ -217,9 +218,9 @@
           condenser_outlet_temp: isConnected ? tCondOut : null,
           evaporator_inlet_temp: isConnected ? tEvapIn : null,
           evaporator_outlet_temp: isConnected ? tEvapOut : null,
-          water_evaporator: 14.2,
-          water_evaporator_inlet: 19.2,
-          water_evaporator_outlet: 14.2,
+          water_evaporator: isConnected ? tWaterOut : 14.2,
+          water_evaporator_inlet: isConnected ? tWaterIn : 19.2,
+          water_evaporator_outlet: isConnected ? tWaterOut : 14.2,
           compressor_status: isConnected ? "RUNNING" : "STANDBY",
           condenser_fan_status: isConnected ? "ACTIVE" : "IDLE",
           evaporator_fan_status: isConnected ? "ACTIVE" : "IDLE",
@@ -233,12 +234,11 @@
           vav_position: 70.0,
           airflow_cfm: isConnected ? 850.0 : 0.0,
           supply_air_temperature: isConnected ? tEvapOut : null,
-          return_air_temperature: isConnected ? tAmbient : null,
+          return_air_temperature: 24.0,
           supply_static_pressure: ductStaticPa,
           set_temperature: 22.0,
-          dht_humidity: rhAmbient,
-          bmp_altitude: tAmbient,
-          field5: tAmbient,
+          dht_humidity: rhVal,
+          field5: tEvapIn,
           sensor_connected: isConnected,
           thingspeak_entry_id: entryId,
           hardware_source: `ESP32-S3 (ThingSpeak #${THINGSPEAK_CHANNEL_ID})`
@@ -369,8 +369,8 @@
           alertBar.style.background = "#064e3b";
           alertBar.style.borderColor = "#10b981";
           alertBar.style.color = "#ecfdf5";
-          const dischP = rec.discharge_pressure !== undefined ? rec.discharge_pressure : (state.dischargePressure || 10.0);
-          alertBar.innerHTML = `<strong>📡 ThingSpeak Live IoT Sync:</strong> Entry #${data.entryId} (Recorded: ${rec.date_display} ${rec.time_display}) &nbsp;|&nbsp; <strong>Thermocouple:</strong> ${rec.supply_air_temperature}°C &nbsp;|&nbsp; <strong>Refrig Pressure:</strong> ${dischP} bar &nbsp;|&nbsp; <strong>Duct Static P:</strong> ${rec.supply_static_pressure ?? 75} Pa`;
+          const dischP = rec.discharge_pressure !== undefined ? rec.discharge_pressure : (state.dischargePressure || 10.5);
+          alertBar.innerHTML = `<strong>📡 ThingSpeak Live IoT Sync:</strong> Entry #${data.entryId} (Recorded: ${rec.date_display} ${rec.time_display}) &nbsp;|&nbsp; <strong>Comp Out:</strong> ${rec.discharge_temperature ?? "--"}°C &nbsp;|&nbsp; <strong>Evap Out:</strong> ${rec.evaporator_outlet_temp ?? "--"}°C &nbsp;|&nbsp; <strong>Cond Out:</strong> ${rec.condenser_outlet_temp ?? "--"}°C &nbsp;|&nbsp; <strong>Water Evap:</strong> ${rec.water_evaporator ?? "--"}°C &nbsp;|&nbsp; <strong>Evap In:</strong> ${rec.evaporator_inlet_temp ?? "--"}°C`;
         }
       }
 

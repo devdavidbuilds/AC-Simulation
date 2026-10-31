@@ -359,7 +359,7 @@
     // Compressor Temperatures
     if (el.pvCompSucTemp) {
       if (s.field5 !== null && s.field5 !== undefined) {
-        el.pvCompSucTemp.textContent = s.field5 + " °C";
+        el.pvCompSucTemp.textContent = s.evaporatorOutletTemp !== null && s.evaporatorOutletTemp !== undefined ? s.evaporatorOutletTemp.toFixed(1) + " °C" : "-- °C";
       } else if (s.evaporatorOutletTemp !== null && s.evaporatorOutletTemp !== undefined) {
         el.pvCompSucTemp.textContent = s.evaporatorOutletTemp.toFixed(1) + " °C";
       } else {
