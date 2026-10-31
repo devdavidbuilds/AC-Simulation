@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    REFRIGERATION CYCLE — 4-COMPONENT REAL-TIME MONITOR
    Style target: BMS / HMI / SCADA operator screen.
    No fault/alarm styling in this version — this is a real-time
@@ -974,9 +974,279 @@ body.page-live #ahuInlineControls,
 body.page-live .ahu-inline-controls,
 body[data-page-mode="live"] #ahuInlineControls,
 body[data-page-mode="live"] .ahu-inline-controls,
-body.page-live #ahuSvg foreignObject,
-body[data-page-mode="live"] #ahuSvg foreignObject {
+body.page-live #ahuSvg foreignObject:not(.ahu-actuator-fo),
+body[data-page-mode="live"] #ahuSvg foreignObject:not(.ahu-actuator-fo) {
   display: none !important;
 }
 
 .mode-switcher[hidden] { display: none; }
+
+
+/* ==========================================================================
+   AHU 3D ROTATING CONTROL VALVE ACTUATORS (COOLING & HEATING)
+   ========================================================================== */
+
+.ahu-actuator-fo {
+  display: block !important;
+  overflow: visible !important;
+  pointer-events: none;
+}
+
+.actuator-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 320px;
+  overflow: visible;
+}
+
+.actuator-head-3d {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+  will-change: transform;
+}
+
+.actuator-box-3d {
+  position: absolute;
+  width: 32px;
+  height: 18px;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+}
+
+/* Base faces */
+.actuator-face {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+/* Front Face: Golden enclosure with LCD screen & button */
+.actuator-face.face-front {
+  width: 32px;
+  height: 18px;
+  left: 0;
+  top: 0;
+  transform: translateZ(6px);
+  backface-visibility: hidden;
+  background: linear-gradient(180deg, #fde77d 0%, #f6ba2a 35%, #d98808 70%, #9e5b00 100%);
+  border: 1.2px solid #5a3502;
+  border-radius: 3.5px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.75), inset 0 -1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* LCD screen on front face */
+.actuator-screen {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 14px;
+  height: 10px;
+  background: linear-gradient(180deg, #94a3af 0%, #c4d2dc 50%, #9cb0bf 100%);
+  border: 1px solid #4a5c68;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+}
+
+/* Circular Knob/Dial on front face */
+.actuator-knob {
+  position: absolute;
+  right: 4px;
+  top: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff6bb 0%, #f7c033 55%, #a86200 100%);
+  border: 0.8px solid #633b00;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-sizing: border-box;
+}
+
+/* Back Face: Golden enclosure with 4 silver corner bolts */
+.actuator-face.face-back {
+  width: 32px;
+  height: 18px;
+  left: 0;
+  top: 0;
+  transform: rotateY(180deg) translateZ(6px);
+  backface-visibility: hidden;
+  background: linear-gradient(180deg, #fde77d 0%, #f6ba2a 35%, #d98808 70%, #9e5b00 100%);
+  border: 1.2px solid #5a3502;
+  border-radius: 3.5px;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.75), inset 0 -1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* 4 Silver Corner Bolts */
+.actuator-bolt {
+  position: absolute;
+  width: 3.8px;
+  height: 3.8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #d8e0e6 40%, #7d8b96 85%, #3d464d 100%);
+  border: 0.6px solid #2e363c;
+  box-shadow: 0 0.8px 1.5px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+}
+
+.actuator-bolt.bolt-tl { top: 2px; left: 3px; }
+.actuator-bolt.bolt-tr { top: 2px; right: 3px; }
+.actuator-bolt.bolt-bl { bottom: 2px; left: 3px; }
+.actuator-bolt.bolt-br { bottom: 2px; right: 3px; }
+
+/* 3D Sides of Center Box */
+.actuator-face.face-left {
+  width: 12px;
+  height: 18px;
+  left: 10px;
+  top: 0;
+  transform: rotateY(-90deg) translateZ(16px);
+  background: linear-gradient(180deg, #d48a07 0%, #a86200 60%, #6d3a00 100%);
+  border: 1px solid #5a3502;
+  border-radius: 2px;
+}
+
+.actuator-face.face-right {
+  width: 12px;
+  height: 18px;
+  left: 10px;
+  top: 0;
+  transform: rotateY(90deg) translateZ(16px);
+  background: linear-gradient(180deg, #fedb66 0%, #df9b10 60%, #8c5200 100%);
+  border: 1px solid #5a3502;
+  border-radius: 2px;
+}
+
+.actuator-face.face-top {
+  width: 32px;
+  height: 12px;
+  left: 0;
+  top: 3px;
+  transform: rotateX(90deg) translateZ(9px);
+  background: linear-gradient(90deg, #d48a07, #ffe985 50%, #d48a07);
+  border: 1px solid #5a3502;
+  border-radius: 2px;
+}
+
+.actuator-face.face-bottom {
+  width: 32px;
+  height: 12px;
+  left: 0;
+  top: 3px;
+  transform: rotateX(-90deg) translateZ(9px);
+  background: #6d3a00;
+  border: 1px solid #4a2700;
+  border-radius: 2px;
+}
+
+/* Left & Right Cylindrical Ears */
+.actuator-ear {
+  position: absolute;
+  width: 7px;
+  height: 11px;
+  top: 3.5px;
+  transform-style: preserve-3d;
+}
+
+.actuator-ear.ear-left {
+  left: -7px;
+}
+
+.actuator-ear.ear-right {
+  right: -7px;
+}
+
+.ear-face {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.ear-left .ear-front {
+  width: 7px;
+  height: 11px;
+  left: 0;
+  top: 0;
+  transform: translateZ(3px);
+  background: linear-gradient(180deg, #fed860 0%, #d98808 60%, #854a00 100%);
+  border: 1px solid #5a3502;
+  border-right: none;
+  border-radius: 3px 0 0 3px;
+}
+
+.ear-left .ear-back {
+  width: 7px;
+  height: 11px;
+  left: 0;
+  top: 0;
+  transform: rotateY(180deg) translateZ(3px);
+  background: linear-gradient(180deg, #fed860 0%, #d98808 60%, #854a00 100%);
+  border: 1px solid #5a3502;
+  border-left: none;
+  border-radius: 0 3px 3px 0;
+}
+
+.ear-left .ear-side {
+  width: 6px;
+  height: 11px;
+  left: -3px;
+  top: 0;
+  transform: rotateY(-90deg) translateZ(0);
+  background: linear-gradient(180deg, #ffe072 0%, #b87504 60%, #683900 100%);
+  border: 1px solid #5a3502;
+  border-radius: 2px;
+}
+
+.ear-right .ear-front {
+  width: 7px;
+  height: 11px;
+  left: 0;
+  top: 0;
+  transform: translateZ(3px);
+  background: linear-gradient(180deg, #fed860 0%, #d98808 60%, #854a00 100%);
+  border: 1px solid #5a3502;
+  border-left: none;
+  border-radius: 0 3px 3px 0;
+}
+
+.ear-right .ear-back {
+  width: 7px;
+  height: 11px;
+  left: 0;
+  top: 0;
+  transform: rotateY(180deg) translateZ(3px);
+  background: linear-gradient(180deg, #fed860 0%, #d98808 60%, #854a00 100%);
+  border: 1px solid #5a3502;
+  border-right: none;
+  border-radius: 3px 0 0 3px;
+}
+
+.ear-right .ear-side {
+  width: 6px;
+  height: 11px;
+  right: -3px;
+  top: 0;
+  transform: rotateY(90deg) translateZ(0);
+  background: linear-gradient(180deg, #ffe072 0%, #b87504 60%, #683900 100%);
+  border: 1px solid #5a3502;
+  border-radius: 2px;
+}
+
+/* Valve Position Readout in SVG */
+.ahu-valve-badge-box {
+  fill: #0c1824;
+  stroke: #1e3a5f;
+  stroke-width: 1.2;
+}
+
+.rd-val-valve {
+  font-family: var(--font-mono, 'Consolas', monospace);
+  font-size: 8px;
+  font-weight: 700;
+  fill: #38bdf8;
+  letter-spacing: 0.02em;
+}

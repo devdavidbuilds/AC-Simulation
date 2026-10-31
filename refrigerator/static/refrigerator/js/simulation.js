@@ -112,6 +112,7 @@
     supplyAirTemperature: AMBIENT_TEMP,
     returnAirTemperature: AMBIENT_TEMP,
     supplyStaticPressure: 0,
+    environmentTemp: AMBIENT_TEMP,
 
     startupTicksRemaining: 0
   };

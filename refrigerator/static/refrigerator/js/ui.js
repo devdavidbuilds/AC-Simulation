@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    ui.js
    ------------------------------------------------------------
    Reads machineState (from simulation.js) and writes it to the
@@ -28,6 +28,7 @@
       "pvWaterEvapIn", "pvWaterEvapOut",
       "pvWaterEvap",
       "pvField5", "ahuField5",
+      "pvEnvTemp", "ahuEnvTemp",
       "eventLog",
       "svgDischargePressure", "svgDischargeTemp", "svgSuctionPressure",
       "svgCondenserOutletTemp", "svgEvaporatorInletTemp", "svgEvaporatorOutletTemp",
@@ -41,7 +42,7 @@
       "actFanStatus", "actVfdLed",
       "ahuReturnTemp", "ahuValveCmd", "ahuValveStatus", "ahuCfm", "ahuSupplyTemp", "ahuStaticPressure",
       "ahuSupplyTemp2", "ahuVfdHz2", "ahuSupplyFilter",
-      "ahuValveCmd2", "ahuHeatingValveCmd", "ahuHeatingValve", "ahuHeatingValveStem", "ahuHotFlow", "ahuFilterLed", "ahuCoolingValve", "ahuValveStem", "ahuWaterFlow", "ahuCoilGlow", "ahuCoolingCoil", "ahuHeatingCoil", "ahuHeatingCoilGlow",
+      "ahuValveCmd2", "ahuHeatingValveCmd", "ahuCoolingActuator3D", "ahuHeatingActuator3D", "ahuHeatingValve", "ahuHeatingValveStem", "ahuHotFlow", "ahuFilterLed", "ahuCoolingValve", "ahuValveStem", "ahuWaterFlow", "ahuCoilGlow", "ahuCoolingCoil", "ahuHeatingCoil", "ahuHeatingCoilGlow",
       "ahuFanRotor", "ahuDamper", "ahuVavOutdoor", "ahuVavReturn", "ahuAirflowDots",
       "inlineValvePct", "inlineHeatingValvePct", "inlineDamperPct", "inlineVavPct", "inlineVfdHz", "inlineSetTemp", "inlineFanStatus"
     ].forEach((id) => (el[id] = document.getElementById(id)));
@@ -109,7 +110,7 @@
     const supplyRh = s.dhtHumidity !== undefined ? Math.round(Number(s.dhtHumidity)) : Math.max(20, mixRh - 0.35 * coolDrop - 0.4 * Math.max(0, heatRise));
     const dp = 85 * Math.pow(upstream / 1800, 2);
     const sdp = 90 * Math.pow(upstream / 1800, 2);
-    const valve = Math.round(s.valveOpening || 60), hv = Math.round(s.heatingValveCommand !== undefined ? s.heatingValveCommand : 40);
+    const valve = Math.round(s.valveOpening !== undefined && s.valveOpening !== null ? s.valveOpening : 60), hv = Math.round(s.heatingValveCommand !== undefined && s.heatingValveCommand !== null ? s.heatingValveCommand : 40);
     const damper = Math.round(s.damperPosition), vav = Math.round(s.vavPosition);
     const t1 = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v).toFixed(1) + " °C" : "-- °C";
 
@@ -404,8 +405,16 @@
     if (el.pvField5) el.pvField5.textContent = s.field5 !== null && s.field5 !== undefined ? s.field5 : "--";
     if (el.ahuField5) el.ahuField5.textContent = s.field5 !== null && s.field5 !== undefined ? s.field5 : "--";
 
+    // Environment Temperature
+    const envVal = s.environmentTemp !== null && s.environmentTemp !== undefined
+      ? s.environmentTemp
+      : (s.ambientTemp !== null && s.ambientTemp !== undefined ? s.ambientTemp : 24.0);
+    const envStr = (typeof envVal === "number" && !isNaN(envVal)) ? envVal.toFixed(1) + " °C" : envVal + " °C";
+    if (el.pvEnvTemp) el.pvEnvTemp.textContent = envStr;
+    if (el.ahuEnvTemp) el.ahuEnvTemp.textContent = envStr;
+
     // ---- AHU / BMS process and actuator layer ----
-    const valve = Math.round(s.valveOpening || 60);
+    const valve = Math.round(s.valveOpening !== undefined && s.valveOpening !== null ? s.valveOpening : 60);
     const heatingValve = Math.round(s.heatingValveCommand !== undefined ? s.heatingValveCommand : 40);
     const damper = Math.round(s.damperPosition);
     const vav = Math.round(s.vavPosition);
@@ -422,9 +431,15 @@
         el.ahuReturnTemp.style.color = "#ef4444";
       }
     }
+    const coolStatus = valve <= 2 ? "0 % (CLOSED)" : (valve >= 98 ? "100 % (OPEN)" : valve + " % (OPENING)");
+    const heatStatus = heatingValve <= 2 ? "0 % (CLOSED)" : (heatingValve >= 98 ? "100 % (OPEN)" : heatingValve + " % (OPENING)");
+
     if (el.ahuValveCmd) el.ahuValveCmd.textContent = valve + " %";
-    if (el.ahuValveCmd2) el.ahuValveCmd2.textContent = valve + " %";
-    if (el.ahuValveStatus) el.ahuValveStatus.textContent = valveState;
+    if (el.ahuValveCmd2) {
+      el.ahuValveCmd2.textContent = coolStatus;
+      el.ahuValveCmd2.setAttribute("fill", valve >= 98 ? "#4ade80" : (valve <= 2 ? "#94a3b8" : "#38bdf8"));
+    }
+    if (el.ahuValveStatus) el.ahuValveStatus.textContent = valve <= 2 ? "CLOSED" : (valve >= 98 ? "OPEN" : "OPENING");
     if (el.ahuCfm) el.ahuCfm.textContent = Math.round(s.airflowCfm || 0) + " CFM";
     if (el.ahuSupplyTemp) {
       if (s.supplyAirTemperature !== null && s.supplyAirTemperature !== undefined) {
@@ -455,9 +470,21 @@
     if (el.inlineSetTemp) el.inlineSetTemp.textContent = s.setTemperature.toFixed(1) + " °C";
     if (el.inlineFanStatus) { el.inlineFanStatus.textContent = fanStatus; el.inlineFanStatus.className = "actuator-readout " + (s.fanOn ? "on" : "off"); }
 
+    const coolingAngle = Math.round((Math.max(0, Math.min(100, valve)) / 100) * 180);
+    const heatingAngle = Math.round((Math.max(0, Math.min(100, heatingValve)) / 100) * 180);
+    if (el.ahuCoolingActuator3D) {
+      el.ahuCoolingActuator3D.style.transform = "rotateY(" + coolingAngle + "deg)";
+    }
+    if (el.ahuHeatingActuator3D) {
+      el.ahuHeatingActuator3D.style.transform = "rotateY(" + heatingAngle + "deg)";
+    }
+
     if (el.ahuValveStem) el.ahuValveStem.setAttribute("y2", (72 - valve * 0.05).toFixed(1));
     if (el.ahuHeatingValveStem) el.ahuHeatingValveStem.setAttribute("y2", (72 - heatingValve * 0.05).toFixed(1));
-    if (el.ahuHeatingValveCmd) el.ahuHeatingValveCmd.textContent = heatingValve + " %";
+    if (el.ahuHeatingValveCmd) {
+      el.ahuHeatingValveCmd.textContent = heatStatus;
+      el.ahuHeatingValveCmd.setAttribute("fill", heatingValve >= 98 ? "#f97316" : (heatingValve <= 2 ? "#94a3b8" : "#fbbf24"));
+    }
     if (el.ahuHeatingValve) el.ahuHeatingValve.classList.toggle("active", heatingValve > 2);
     if (el.ahuHotFlow) {
       el.ahuHotFlow.style.opacity = String(heatingValve > 2 ? Math.min(1, 0.35 + (heatingValve / 100) * 0.65) : 0);

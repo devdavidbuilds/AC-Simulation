@@ -1,4 +1,4 @@
-{% load static %}
+﻿{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -64,6 +64,7 @@
               <div class="ahu-instrument"><span>SUPPLY AIR TEMP.</span><strong id="ahuSupplyTemp">24.0 °C</strong></div>
               <div class="ahu-instrument"><span>SUPPLY STATIC PRESSURE</span><strong id="ahuStaticPressure">0 Pa</strong></div>
               <div class="ahu-instrument" style="background:#064e3b; color:#ecfdf5;"><span style="color:#6ee7b7;">FIELD 5 (ALT / AUX)</span><strong id="ahuField5" style="color:#a7f3d0;">--</strong></div>
+              <div class="ahu-instrument" style="background:#1e293b; color:#f8fafc;"><span style="color:#94a3b8;">ENVIRONMENT TEMP.</span><strong id="ahuEnvTemp">24.0 °C</strong></div>
             </div>
 
             <div id="ahuAlertBar" class="ahu-alert-bar" role="alert" aria-live="polite" hidden></div>
@@ -397,14 +398,52 @@
                 <path d="M470 258 V350 H345" class="ahu-water-pipe ahu-chw-return" marker-end="url(#ahuWaterArrow)"/>
                 <text x="345" y="72" class="ahu-small">CHW SUPPLY</text>
                 <text x="345" y="366" class="ahu-small">CHW RETURN</text>
-                <g class="rd-card" id="rd_coolValve"><rect class="rd-box" x="385" y="10" width="80" height="26" rx="3"/><text class="rd-title" x="425.0" y="19.5" text-anchor="middle">COOLING VALVE</text><line class="rd-sep" x1="388" y1="22.5" x2="462" y2="22.5"/><text class="rd-label" x="389" y="32">Position</text><text id="ahuValveCmd2" class="rd-val" x="461" y="32" text-anchor="end">--</text></g>
+                <g class="rd-card" id="rd_coolValve">
+                  <rect class="rd-box ahu-valve-badge-box" x="380" y="5" width="90" height="30" rx="4"/>
+                  <text class="rd-title" x="425.0" y="14" text-anchor="middle">COOLING VALVE</text>
+                  <line class="rd-sep" x1="384" y1="17" x2="466" y2="17"/>
+                  <text id="ahuValveCmd2" class="rd-val-valve" x="425.0" y="27.5" text-anchor="middle">--</text>
+                </g>
                 <g id="ahuCoolingValve" class="ahu-control-valve">
+                  <!-- 3D Rotating Actuator Head -->
+                  <foreignObject x="393" y="38" width="64" height="28" class="ahu-actuator-fo">
+                    <div class="actuator-stage" xmlns="http://www.w3.org/1999/xhtml">
+                      <div id="ahuCoolingActuator3D" class="actuator-head-3d">
+                        <div class="actuator-box-3d">
+                          <!-- Front Face (Screen + Dial) -->
+                          <div class="actuator-face face-front">
+                            <div class="actuator-screen"></div>
+                            <div class="actuator-knob"></div>
+                          </div>
+                          <!-- Back Face (4 Silver Bolts) -->
+                          <div class="actuator-face face-back">
+                            <div class="actuator-bolt bolt-tl"></div>
+                            <div class="actuator-bolt bolt-tr"></div>
+                            <div class="actuator-bolt bolt-bl"></div>
+                            <div class="actuator-bolt bolt-br"></div>
+                          </div>
+                          <!-- 3D Perspective Sides -->
+                          <div class="actuator-face face-left"></div>
+                          <div class="actuator-face face-right"></div>
+                          <div class="actuator-face face-top"></div>
+                          <div class="actuator-face face-bottom"></div>
+                          <!-- Side Ear Cylinders -->
+                          <div class="actuator-ear ear-left">
+                            <div class="ear-face ear-front"></div>
+                            <div class="ear-face ear-back"></div>
+                            <div class="ear-face ear-side"></div>
+                          </div>
+                          <div class="actuator-ear ear-right">
+                            <div class="ear-face ear-front"></div>
+                            <div class="ear-face ear-back"></div>
+                            <div class="ear-face ear-side"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </foreignObject>
                   <line id="ahuValveStem" x1="425" y1="64" x2="425" y2="72" class="ahu-valve-stem"/>
-                  <rect x="410" y="48" width="30" height="16" rx="4" class="ahu-valve-actuator"/>
-                  <rect x="404" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
-                  <rect x="440" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
-                  <rect x="415" y="51" width="14" height="8" rx="2" class="ahu-valve-window"/>
-                  <circle cx="434" cy="55" r="2" class="ahu-valve-detail"/>
+                  <rect x="421" y="62" width="8" height="3" rx="1" class="ahu-valve-detail"/>
                   <rect x="418" y="69" width="14" height="8" rx="2" class="ahu-valve-body"/>
                   <rect x="407" y="75" width="36" height="14" rx="4" class="ahu-valve-body"/>
                   <rect x="402" y="72" width="6" height="20" rx="1.5" class="ahu-valve-flange"/>
@@ -422,14 +461,52 @@
                 <path d="M622 258 V335 H545" class="ahu-water-pipe ahu-hot-pipe ahu-hw-return" marker-end="url(#ahuHotArrow)"/>
                 <text x="490" y="72" class="ahu-small">HW SUPPLY</text>
                 <text x="545" y="351" class="ahu-small">HW RETURN</text>
-                <g class="rd-card" id="rd_heatValve"><rect class="rd-box" x="535" y="10" width="80" height="26" rx="3"/><text class="rd-title" x="575.0" y="19.5" text-anchor="middle">HEATING VALVE</text><line class="rd-sep" x1="538" y1="22.5" x2="612" y2="22.5"/><text class="rd-label" x="539" y="32">Position</text><text id="ahuHeatingValveCmd" class="rd-val" x="611" y="32" text-anchor="end">--</text></g>
+                                <g class="rd-card" id="rd_heatValve">
+                  <rect class="rd-box ahu-valve-badge-box" x="530" y="5" width="90" height="30" rx="4"/>
+                  <text class="rd-title" x="575.0" y="14" text-anchor="middle">HEATING VALVE</text>
+                  <line class="rd-sep" x1="534" y1="17" x2="616" y2="17"/>
+                  <text id="ahuHeatingValveCmd" class="rd-val-valve" x="575.0" y="27.5" text-anchor="middle">--</text>
+                </g>
                 <g id="ahuHeatingValve" class="ahu-control-valve">
+                  <!-- 3D Rotating Actuator Head -->
+                  <foreignObject x="543" y="38" width="64" height="28" class="ahu-actuator-fo">
+                    <div class="actuator-stage" xmlns="http://www.w3.org/1999/xhtml">
+                      <div id="ahuHeatingActuator3D" class="actuator-head-3d">
+                        <div class="actuator-box-3d">
+                          <!-- Front Face (Screen + Dial) -->
+                          <div class="actuator-face face-front">
+                            <div class="actuator-screen"></div>
+                            <div class="actuator-knob"></div>
+                          </div>
+                          <!-- Back Face (4 Silver Bolts) -->
+                          <div class="actuator-face face-back">
+                            <div class="actuator-bolt bolt-tl"></div>
+                            <div class="actuator-bolt bolt-tr"></div>
+                            <div class="actuator-bolt bolt-bl"></div>
+                            <div class="actuator-bolt bolt-br"></div>
+                          </div>
+                          <!-- 3D Perspective Sides -->
+                          <div class="actuator-face face-left"></div>
+                          <div class="actuator-face face-right"></div>
+                          <div class="actuator-face face-top"></div>
+                          <div class="actuator-face face-bottom"></div>
+                          <!-- Side Ear Cylinders -->
+                          <div class="actuator-ear ear-left">
+                            <div class="ear-face ear-front"></div>
+                            <div class="ear-face ear-back"></div>
+                            <div class="ear-face ear-side"></div>
+                          </div>
+                          <div class="actuator-ear ear-right">
+                            <div class="ear-face ear-front"></div>
+                            <div class="ear-face ear-back"></div>
+                            <div class="ear-face ear-side"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </foreignObject>
                   <line id="ahuHeatingValveStem" x1="575" y1="64" x2="575" y2="72" class="ahu-valve-stem"/>
-                  <rect x="560" y="48" width="30" height="16" rx="4" class="ahu-valve-actuator"/>
-                  <rect x="554" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
-                  <rect x="590" y="51" width="6" height="9" rx="2" class="ahu-valve-actuator"/>
-                  <rect x="565" y="51" width="14" height="8" rx="2" class="ahu-valve-window"/>
-                  <circle cx="584" cy="55" r="2" class="ahu-valve-detail"/>
+                  <rect x="571" y="62" width="8" height="3" rx="1" class="ahu-valve-detail"/>
                   <rect x="568" y="69" width="14" height="8" rx="2" class="ahu-valve-body"/>
                   <rect x="557" y="75" width="36" height="14" rx="4" class="ahu-valve-body"/>
                   <rect x="552" y="72" width="6" height="20" rx="1.5" class="ahu-valve-flange"/>
@@ -791,6 +868,11 @@
         <div class="param-box blue" style="grid-column: span 2;">
           <div class="param-label">Water Evaporator Outlet Temp.</div>
           <div class="param-value" id="pvWaterEvapOut">24.0 °C</div>
+        </div>
+        <!-- 7. Environment Temperature -->
+        <div class="param-box blue" style="grid-column: span 2;">
+          <div class="param-label">Environment Temp.</div>
+          <div class="param-value" id="pvEnvTemp">24.0 °C</div>
         </div>
         <div id="pvField5" style="display:none;"></div>
       </div>

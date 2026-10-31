@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    app.js — initialization, mode switching, and event wiring.
    ============================================================ */
 
@@ -239,6 +239,8 @@
           set_temperature: 22.0,
           dht_humidity: rhVal,
           field5: tEvapIn,
+          environment_temperature: 24.0,
+          environment_temp: 24.0,
           sensor_connected: isConnected,
           thingspeak_entry_id: entryId,
           hardware_source: `ESP32-S3 (ThingSpeak #${THINGSPEAK_CHANNEL_ID})`
@@ -335,6 +337,7 @@
       state.waterEvaporatorIn = rec.water_evaporator_inlet !== undefined ? rec.water_evaporator_inlet : (isConnected ? 12.0 : 24.0);
       state.waterEvaporatorOut = rec.water_evaporator_outlet !== undefined ? rec.water_evaporator_outlet : (rec.water_evaporator || (isConnected ? 7.0 : 24.0));
       state.mqAirQuality = rec.mq_air_quality;
+      state.environmentTemp = rec.environment_temperature !== undefined ? rec.environment_temperature : (rec.environment_temp !== undefined ? rec.environment_temp : 24.0);
 
       const timeStr = rec.time_display || new Date().toLocaleTimeString();
       const humText = rec.dht_humidity !== null && rec.dht_humidity !== undefined ? ` | Humidity: ${rec.dht_humidity}%` : "";
@@ -496,6 +499,7 @@
     Sim.onTick(function (s) {
       // Sync inline controls (near equipment) — SAME state, bidirectional sync
       if (inlineActuatorInputs.valveOpening && document.activeElement !== inlineActuatorInputs.valveOpening) inlineActuatorInputs.valveOpening.value = s.valveOpening;
+      if (inlineActuatorInputs.heatingValveCommand && document.activeElement !== inlineActuatorInputs.heatingValveCommand) inlineActuatorInputs.heatingValveCommand.value = s.heatingValveCommand;
       if (inlineActuatorInputs.damperPosition && document.activeElement !== inlineActuatorInputs.damperPosition) inlineActuatorInputs.damperPosition.value = s.damperPosition;
       if (inlineActuatorInputs.vavPosition && document.activeElement !== inlineActuatorInputs.vavPosition) inlineActuatorInputs.vavPosition.value = s.vavPosition;
       if (inlineActuatorInputs.vfdFrequency && document.activeElement !== inlineActuatorInputs.vfdFrequency) inlineActuatorInputs.vfdFrequency.value = s.vfdFrequency;

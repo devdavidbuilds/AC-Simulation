@@ -376,6 +376,8 @@ def get_thingspeak_telemetry(request):
         payload['field5_ct_out_evap_in'] = f5_ct_out_evap_in
         payload['field6_humidity'] = f6_humidity
         payload['field5'] = f5_ct_out_evap_in
+        payload['environment_temperature'] = 24.0
+        payload['environment_temp'] = 24.0
         payload['sensor_connected'] = sensor_connected
         payload['thingspeak_entry_id'] = entry_id
         payload['hardware_source'] = f"ESP32-S3 (ThingSpeak #{THINGSPEAK_CHANNEL_ID})"
