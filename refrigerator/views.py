@@ -204,16 +204,16 @@ def get_telemetry_range_info(request):
         }, status=500)
 
 
-THINGSPEAK_CHANNEL_ID = "3559899"
-THINGSPEAK_READ_KEY = "CAYAWMOIKYR68VDP"
+THINGSPEAK_CHANNEL_ID = "3504371"
+THINGSPEAK_READ_KEY = "SNKTWBRJ0LSJIK2I"
 
 
 @require_http_methods(["GET"])
 def get_thingspeak_telemetry(request):
     """
     GET /api/telemetry/thingspeak/
-    Fetches the latest live reading from the ESP32-S3 ThingSpeak channel (3559899),
-    maps the sensor data (Thermocouple & Pressure Transducer) to the AHU / Refrigeration telemetry schema,
+    Fetches the latest live reading from the ECE ESP32-S3 ThingSpeak channel (3504371),
+    maps the sensor data to the AHU / Refrigeration telemetry schema,
     saves the record to PostgreSQL, and returns the real-time telemetry payload.
     """
     import urllib.request
@@ -226,15 +226,10 @@ def get_thingspeak_telemetry(request):
             data = json.loads(resp.read().decode('utf-8'))
 
         if not data or data == -1:
-            return JsonResponse({
-                'status': 'waiting',
-                'channel_id': THINGSPEAK_CHANNEL_ID,
-                'message': f'ThingSpeak channel #{THINGSPEAK_CHANNEL_ID} connected. Awaiting initial upload from ESP32.',
-                'telemetry': None
-            })
+            return JsonResponse({'status': 'error', 'message': 'No data found in ThingSpeak channel'}, status=404)
 
         # Robust Sensor Value Parser (Returns None if disconnected/empty/NaN/-127)
-        def parse_sensor_val(raw, min_v=-50.0, max_v=5000.0):
+        def parse_sensor_val(raw, min_v=-40.0, max_v=5000.0):
             if raw is None:
                 return None
             s = str(raw).strip().lower()
@@ -248,28 +243,21 @@ def get_thingspeak_telemetry(request):
             except (ValueError, TypeError):
                 return None
 
-        # Field 1: Thermocouple Temperature (°C)
-        # Field 2: Pressure ADC Voltage (V)
-        # Field 3: Estimated Sensor Output Voltage (V)
-        # Field 4: Pressure MPa (1.6 MPa transducer: 1 MPa = 10 bar)
-        # Field 5: Auxiliary / Altitude / Field 5
-        # Field 6: Raw air-quality ADC
-        tc_temp = parse_sensor_val(data.get('field1'), -50.0, 1370.0)
-        adc_volt = parse_sensor_val(data.get('field2'), 0.0, 5.0)
-        sensor_volt = parse_sensor_val(data.get('field3'), 0.0, 5.0)
-        pressure_mpa = parse_sensor_val(data.get('field4'), -0.5, 50.0)
-        field5_val = parse_sensor_val(data.get('field5'), -1000.0, 100000.0)
+        # Field 1: DHT22 Temperature (°C)
+        # Field 2: DHT22 Humidity (%)
+        # Field 3: BMP280 Temperature (°C)
+        # Field 4: BMP280 Pressure (hPa)
+        # Field 5: BMP280 Altitude / Aux (m)
+        # Field 6: MQ-135 Raw air-quality ADC
+        dht_temp = parse_sensor_val(data.get('field1'), -40.0, 120.0)
+        dht_hum = parse_sensor_val(data.get('field2'), 0.0, 100.0)
+        bmp_temp = parse_sensor_val(data.get('field3'), -40.0, 120.0)
+        bmp_press = parse_sensor_val(data.get('field4'), 0.0, 2000.0)
+        bmp_alt = parse_sensor_val(data.get('field5'), -1000.0, 100000.0)
         mq_adc = parse_sensor_val(data.get('field6'), 0.0, 10000.0)
 
-        dht_temp = tc_temp
-        bmp_temp = tc_temp
-        bmp_alt = field5_val
-        sensor_connected = (tc_temp is not None or pressure_mpa is not None)
-        calc_temp = tc_temp if tc_temp is not None else 24.0
-
-        # Pressure conversion: 1 MPa = 10 bar
-        press_bar = round(pressure_mpa * 10.0, 2) if pressure_mpa is not None else 10.0
-        press_pa = round(pressure_mpa * 1000000.0, 1) if pressure_mpa is not None else 0.0
+        sensor_connected = (dht_temp is not None or bmp_temp is not None)
+        calc_temp = dht_temp if dht_temp is not None else (bmp_temp if bmp_temp is not None else 24.0)
 
         created_at_str = data.get('created_at')
         entry_id = data.get('entry_id')
@@ -341,10 +329,6 @@ def get_thingspeak_telemetry(request):
         payload['supply_air_temperature'] = round(dht_temp, 1) if dht_temp is not None else None
         payload['return_air_temperature'] = round(bmp_temp, 1) if bmp_temp is not None else None
         payload['discharge_temperature'] = round(calc_temp + 10.0, 1) if sensor_connected else None
-        payload['discharge_pressure'] = press_bar if pressure_mpa is not None else 10.0
-        payload['pressure_mpa'] = pressure_mpa
-        payload['adc_voltage'] = adc_volt
-        payload['sensor_voltage'] = sensor_volt
         payload['dht_temp'] = dht_temp
         payload['dht_humidity'] = dht_hum
         payload['bmp_temp'] = bmp_temp
@@ -354,7 +338,7 @@ def get_thingspeak_telemetry(request):
         payload['sensor_connected'] = sensor_connected
         payload['mq_air_quality'] = mq_adc
         payload['thingspeak_entry_id'] = entry_id
-        payload['hardware_source'] = f"ESP32-S3 (ThingSpeak #{THINGSPEAK_CHANNEL_ID})"
+        payload['hardware_source'] = "ESP32-S3 (ThingSpeak #3504371)"
 
         return JsonResponse({
             'status': 'ok',

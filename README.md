@@ -1,100 +1,197 @@
-# Refrigeration Cycle — Real-Time 4-Component Monitor
+# Smart HVAC-R Digital Twin: Air Handling Unit (AHU) & Refrigeration SCADA Monitor
 
-## Current HMI scope
+An industrial-grade Building Management System (BMS) and SCADA Digital Twin combining an **Air Handling Unit (AHU)** air-side workflow with a **Vapour-Compression Refrigeration Cycle**.
 
-The current build combines the vapour-compression refrigeration-cycle mimic with an animated AHU/BMS air-side layer. The AHU includes the mentor-requested controls: cooling valve (0–100%), damper (0–100%), supply fan ON/OFF, VFD frequency, VAV position, CFM airflow and temperature setpoint. The AHU graphic shows a cooling coil, filter, VAV outdoor/return branches, supply fan, damper, VFD block, animated air movement and cooling-water flow.
+The system operates in two synchronized modes:
+1. **Simulation Mode (`/`)**: An interactive thermodynamic simulator allowing operators to adjust VFD fan speeds, cooling/heating valves, damper positions, and airflow setpoints with real-time thermodynamic response.
+2. **Live IoT Mode (`/ahu/live/` & `/refrigeration/live/`)**: A real-time hardware telemetry dashboard fetching live physical sensor data from an **ESP32-S3** microcontroller via **ThingSpeak**, logging time-series records to **PostgreSQL**, and driving the SVG process animations directly from live environment readings.
 
-### Run
+---
 
+## System Architecture
+
+```mermaid
+flowchart TD
+    subgraph IoT_Hardware ["Field Sensors & IoT Microcontroller"]
+        ESP["ESP32-S3 Microcontroller"]
+        DHT["DHT22 (Supply Air Temp & RH)"]
+        BMP["BMP280 (Return Temp & Static Pressure)"]
+        MQ["MQ-135 (Air Quality ADC)"]
+        DHT --> ESP
+        BMP --> ESP
+        MQ --> ESP
+    end
+
+    subgraph Cloud ["Cloud IoT Platform"]
+        TS["ThingSpeak IoT Channel (#3504371)<br/>REST API Feeds"]
+        ESP -- "Wi-Fi HTTP Post" --> TS
+    end
+
+    subgraph Backend ["Django & Database Backend"]
+        SRV["Django Application Server"]
+        DB[(PostgreSQL Database<br/>'refrigeration_telemetry')]
+        TS -- "GET /api/telemetry/thingspeak/" --> SRV
+        SRV -- "Auto-Deduplication & Storage" --> DB
+    end
+
+    subgraph Frontend ["HMI / SCADA Dashboard (Browser)"]
+        UI["Industrial SCADA Web Interface"]
+        SVG["Interactive Vector Mimic (AHU & Chiller)"]
+        ENG["Simulation & Telemetry Engine (JS)"]
+        SRV --> UI
+        ENG --> SVG
+    end
+```
+
+---
+
+## Key Features
+
+### 1. Dual Operational Modes
+* **Simulation Mode**:
+  * Operator manual control sliders for Cooling Valve (0–100%), Heating Valve (0–100%), Supply Damper (0–100%), VAV Damper (0–100%), and VFD Fan Speed (0–60 Hz).
+  * Real-time thermal mixing, coil temperature drops, filter pressure differential ($DP \propto \text{CFM}^2$), and duct static pressure calculations.
+* **Live IoT Telemetry Mode**:
+  * Direct read-only monitoring interface with manual sliders automatically hidden.
+  * Real-time polling (every 3 seconds) from ThingSpeak cloud feeds.
+  * Live status banner showing channel entry ID, ESP32 timestamp, and connection health.
+  * Automatic sensor disconnect detection (alerts when wire leads or sensors lose power/signal).
+
+### 2. Animated SCADA / BMS Process Mimic
+* Pure vector SVG schematic of an industrial Air Handling Unit:
+  * **Mixing Chamber**: Fresh Outdoor Air (OA) and Return Air (RA) with motorized VAV dampers.
+  * **Pre-Filter Stage**: Dynamic differential pressure readout and alarm states.
+  * **Chilled Water Cooling Coil**: Animated cooling water piping flow, stem lift, and fin frost-glow gradients.
+  * **Hot Water Heating Coil**: Thermal heating glow and dynamic heating water circulation.
+  * **Centrifugal Supply Fan**: Continuous rotational speed animation tied to VFD frequency.
+  * **Supply Filter & Damper**: Final filtration stage and motorized volume damper control.
+  * **Color-Coded Thermodynamic Readout Cards**: Real-time stage temperatures, relative humidity, CFM airflow, and static pressure.
+
+### 3. Vapour-Compression Refrigeration Cycle
+* 4-component physical refrigeration loop:
+  1. **Hermetic Compressor** (Suction & Discharge Pressures/Temperatures, Motor Current, RPM)
+  2. **Air-Cooled Condenser** (Condenser Outlet Subcooling Temp)
+  3. **Expansion Device / Capillary Tube** (Pressure drop and flash-gas expansion)
+  4. **Direct Expansion (DX) Evaporator** (Inlet/Outlet Temperatures and Superheat calculation)
+* Animated fluid particle stream showing state changes (high-pressure gas $\rightarrow$ high-pressure liquid $\rightarrow$ low-pressure flashing mixture $\rightarrow$ superheated vapour).
+
+### 4. PostgreSQL Telemetry Logging
+* Every incoming IoT record is automatically saved to PostgreSQL (`refrigeration_telemetry` table).
+* Built-in deduplication prevents redundant entries when the microcontroller uploads at a slower rate.
+* Telemetry API supports query by date/time range for historical analysis and chart playback.
+
+---
+
+## IoT Hardware & Sensor Mapping
+
+The current deployment connects to ThingSpeak Channel **`#3504371`** (Read Key: `SNKTWBRJ0LSJIK2I`):
+
+| Channel Field | Hardware Sensor | Engineering Parameter | Unit | UI Card Name |
+| :--- | :--- | :--- | :--- | :--- |
+| **Field 1** | DHT22 | Supply Air Temperature | °C | `SUPPLY AIR TEMP.` |
+| **Field 2** | DHT22 | Relative Humidity | % | `RELATIVE HUMIDITY` |
+| **Field 3** | BMP280 | Return Air Temperature | °C | `RETURN AIR TEMP.` |
+| **Field 4** | BMP280 | Supply Static Pressure | hPa / Pa | `SUPPLY STATIC PRESSURE` |
+| **Field 5** | BMP280 | Barometric Altitude / Aux | m | Internal Auxiliary |
+| **Field 6** | MQ-135 | Air Quality VOC ADC | ADC / ppm | Air Quality Index |
+
+---
+
+## Project Structure
+
+```
+AC-Simulation-main/
+├── manage.py                          # Django management script
+├── requirements.txt                   # Python dependencies
+├── project/                           # Project configuration
+│   ├── settings.py                    # Database, apps, static configuration
+│   ├── urls.py                        # Root URL routing
+│   ├── wsgi.py                        # WSGI server entry point
+│   └── asgi.py                        # ASGI asynchronous entry point
+└── refrigerator/                      # Core HVAC-R Django Application
+    ├── models.py                      # PostgreSQL RefrigerationTelemetry model
+    ├── views.py                       # HTTP views & ThingSpeak polling endpoints
+    ├── urls.py                        # Application route definitions
+    ├── templates/refrigerator/
+    │   └── index.html                 # BMS HMI template with embedded SVG mimic
+    └── static/refrigerator/
+        ├── css/
+        │   └── style.css              # Industrial SCADA/HMI theme & responsive grid
+        └── js/
+            ├── app.js                 # ThingSpeak polling engine & event controller
+            ├── ui.js                  # SVG mimic animation, DOM rendering, alert logic
+            ├── simulation.js          # Thermodynamic simulation model
+            └── history.js             # Historical telemetry queries & playback
+```
+
+---
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/` | `GET` | Main AHU Simulation & Control Dashboard |
+| `/ahu/live/` | `GET` | Dedicated Live AHU IoT Mode (Manual controls hidden) |
+| `/refrigeration/` | `GET` | Refrigeration Cycle Simulation Monitor |
+| `/refrigeration/live/` | `GET` | Live Refrigeration Telemetry View |
+| `/api/telemetry/thingspeak/` | `GET` | Polls ThingSpeak, logs record to PostgreSQL, and returns JSON payload |
+| `/api/telemetry/save/` | `POST` | Manually logs current machine state to database |
+| `/api/telemetry/history/` | `GET` | Retrieves historical telemetry records within a timestamp range |
+| `/api/telemetry/range-info/` | `GET` | Returns first and last timestamp recorded in PostgreSQL |
+
+---
+
+## Setup & Running Instructions
+
+### Prerequisites
+* Python 3.10+
+* PostgreSQL server running locally or accessible via network
+
+### 1. Installation
+Clone the repository and install the required dependencies:
+```powershell
+# Navigate into project directory
+cd "AC-Simulation-main"
+
+# Activate your virtual environment (if present)
+.\venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 2. Database Configuration
+Ensure your PostgreSQL database credentials in `project/settings.py` match your local database:
+```python
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'AC SIMULATIOM',      # Database name
+        'USER': 'postgres',
+        'PASSWORD': 'your_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+```
+
+Apply migrations:
 ```powershell
 python manage.py migrate
+```
+
+### 3. Launch Development Server
+```powershell
 python manage.py runserver
 ```
 
-Open `http://127.0.0.1:8000/`. Keep the existing PostgreSQL credentials in your local `project/settings.py`; do not replace that file with credentials from another machine.
+Open your browser:
+* **Interactive Simulation**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+* **Live IoT Stream**: [http://127.0.0.1:8000/ahu/live/](http://127.0.0.1:8000/ahu/live/)
 
+---
 
-A frontend simulation of the basic vapour-compression refrigeration
-cycle, focused on exactly four components: **Compressor**,
-**Condenser**, **Capillary Tube** (the expansion device), and
-**Evaporator**. Styled as a BMS/HMI/SCADA operator screen. Built
-with Django (routing, templates, static files only) + vanilla
-JavaScript (machine state, sensor physics, animation) + inline SVG
-(the cycle mimic).
-
-This version has **no fault simulation** — it's a real-time working
-demonstration only: press Start and watch the four components run
-through the cycle with live, physically-connected sensor values;
-press Stop and watch them return to ambient.
-
-## Running it
-
-```bash
-pip install -r requirements.txt
-python manage.py runserver
-```
-
-Open **http://127.0.0.1:8000/refrigerator/**
-
-No database, no API, no build step.
-
-## The four components and their sensors
-
-| Component | Sensors modeled |
-|---|---|
-| **Compressor** | Suction pressure (inlet), discharge pressure (outlet), discharge line temperature, motor current, speed (RPM) |
-| **Condenser** | Condenser outlet temperature (subcooled liquid leaving the coil) — inlet side shares the compressor's discharge pressure/temperature reading, since that's the same line |
-| **Capillary Tube** | No sensor of its own (it's a fixed orifice with no moving parts) — it's monitored indirectly via the pressure/temperature drop between its inlet (condenser outlet) and outlet (evaporator inlet) |
-| **Evaporator** | Evaporator inlet temperature (flash-cooled liquid just after the capillary), evaporator outlet temperature (suction side) — the difference between these two is displayed as **Superheat**, the standard way an evaporator coil's performance is checked in the field |
-
-Suction pressure is also shown, taken at the compressor inlet /
-evaporator outlet (same line).
-
-## Project structure
-
-```
-project/
-├── manage.py
-├── requirements.txt
-├── project/                     Django project (settings, urls, wsgi/asgi)
-└── refrigerator/                The single Django app
-    ├── views.py                 One view: renders index.html
-    ├── urls.py                  /refrigerator/
-    ├── models.py                Intentionally empty — no DB in this version
-    ├── templates/refrigerator/index.html   HMI layout + inline SVG cycle mimic
-    └── static/refrigerator/
-        ├── css/style.css        Industrial HMI styling
-        ├── js/
-        │   ├── simulation.js    machineState + tick loop + sensor physics
-        │   ├── ui.js            DOM/SVG rendering + refrigerant flow animation
-        │   └── app.js           Start/Stop button wiring + startup
-        └── images/refrigerator.svg   Standalone reference icon (not used
-                                       by the simulation — the live mimic
-                                       is inlined in index.html)
-```
-
-## How it's wired together
-
-- **simulation.js** owns `machineState` and runs a fixed-interval
-  tick (700 ms). Every value (RPM, current, both pressures, and all
-  four temperatures) eases toward a fixed nominal operating point
-  when running, and toward ambient (24°C / ~1 bar) when stopped —
-  nothing is randomized. `window.Sim` exposes `start()`, `stop()`,
-  `onTick()`, `state`.
-- **ui.js** reads `machineState` on every tick and updates the
-  status panel, live parameter boxes, the event log, and each SVG
-  component's CSS state (`state-off` / `state-running` /
-  `state-hot` / `state-cooling`). It also runs its own
-  `requestAnimationFrame` loop that moves refrigerant flow dots
-  along the actual pipe geometry, easing the flow speed toward the
-  current compressor speed so start-up/shutdown look like a gradual
-  ramp rather than a switch flip.
-- **app.js** only wires the Start/Stop buttons to `Sim` and starts
-  the two loops.
-
-## Future backend integration (not implemented now)
-
-`simulation.js`'s `tick()` function is the intended seam for
-swapping in real sensor data later — replace its computed
-`machineState.*` assignments with values read from a Django
-view/API response and leave `ui.js`/`app.js`/the template untouched.
+## License & Author
+* **Project**: AC Simulation AHU Clean Workflow
+* **Operator**: MADHUMANOJ
+* **Purpose**: IoT-based Environmental Monitoring and Real-Time HVAC-R SCADA Digital Twin

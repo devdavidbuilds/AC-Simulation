@@ -969,4 +969,14 @@ button.btn-stop:hover { background: #a52a1d; }
 .live-banner.stale .nav-dot { background: #e67e22; animation: none; }
 body.page-live .inline-ctrl-locked { pointer-events: none; opacity: 0.6; }
 
+/* In Live Mode, hide the manual inline control panels and VFD control block */
+body.page-live #ahuInlineControls,
+body.page-live .ahu-inline-controls,
+body[data-page-mode="live"] #ahuInlineControls,
+body[data-page-mode="live"] .ahu-inline-controls,
+body.page-live #ahuSvg foreignObject,
+body[data-page-mode="live"] #ahuSvg foreignObject {
+  display: none !important;
+}
+
 .mode-switcher[hidden] { display: none; }
