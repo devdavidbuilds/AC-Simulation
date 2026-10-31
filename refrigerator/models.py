@@ -18,6 +18,9 @@ class RefrigerationTelemetry(models.Model):
     condenser_outlet_temp = models.FloatField(help_text="Condenser outlet / expansion inlet temperature in °C")
     evaporator_inlet_temp = models.FloatField(help_text="Expansion outlet / evaporator inlet temperature in °C")
     evaporator_outlet_temp = models.FloatField(help_text="Evaporator outlet / suction line temperature in °C")
+    water_evaporator = models.FloatField(default=7.0, null=True, blank=True, help_text="Water evaporator temperature in °C")
+    water_evaporator_inlet = models.FloatField(default=12.0, null=True, blank=True, help_text="Water evaporator inlet temperature in °C")
+    water_evaporator_outlet = models.FloatField(default=7.0, null=True, blank=True, help_text="Water evaporator outlet temperature in °C")
 
     # Component & Machine operational status
     compressor_status = models.CharField(max_length=30, default="OFF", help_text="RUNNING / STARTING / STOPPED / OFF")
@@ -62,6 +65,9 @@ class RefrigerationTelemetry(models.Model):
             "condenser_outlet_temp": round(self.condenser_outlet_temp, 2),
             "evaporator_inlet_temp": round(self.evaporator_inlet_temp, 2),
             "evaporator_outlet_temp": round(self.evaporator_outlet_temp, 2),
+            "water_evaporator": round(self.water_evaporator, 2) if self.water_evaporator is not None else 7.0,
+            "water_evaporator_inlet": round(self.water_evaporator_inlet, 2) if self.water_evaporator_inlet is not None else 12.0,
+            "water_evaporator_outlet": round(self.water_evaporator_outlet, 2) if self.water_evaporator_outlet is not None else 7.0,
             "compressor_status": self.compressor_status,
             "condenser_fan_status": self.condenser_fan_status,
             "evaporator_fan_status": self.evaporator_fan_status,

@@ -29,7 +29,10 @@
     dischargeTemp: 82.0,
     condenserOutletTemp: 40.0,
     evaporatorInletTemp: -8.0,
-    evaporatorOutletTemp: 1.0
+    evaporatorOutletTemp: 1.0,
+    waterEvaporator: 7.0,
+    waterEvaporatorIn: 12.0,
+    waterEvaporatorOut: 7.0
   };
 
   // Air-side actuator defaults requested for the AHU/control layer.
@@ -37,7 +40,7 @@
     valveOpening: 60,
     heatingValveCommand: 40,
     damperPosition: 70,
-    fanOn: false,
+    fanOn: true,
     vfdFrequency: 40,
     vavPosition: 70,
     setTemperature: 22.0
@@ -70,8 +73,8 @@
   function round1(v) { return Math.round(v * 10) / 10; }
 
   const machineState = {
-    running: false,
-    systemStatus: "STOPPED", // STOPPED | STARTING | RUNNING
+    running: true,
+    systemStatus: "RUNNING", // STOPPED | STARTING | RUNNING
 
     suctionPressure: 1.0,
     dischargePressure: 1.0,
@@ -79,6 +82,9 @@
     condenserOutletTemp: AMBIENT_TEMP,
     evaporatorInletTemp: AMBIENT_TEMP,
     evaporatorOutletTemp: AMBIENT_TEMP,
+    waterEvaporator: AMBIENT_TEMP,
+    waterEvaporatorIn: AMBIENT_TEMP,
+    waterEvaporatorOut: AMBIENT_TEMP,
 
     // Dynamic (read-only) component values + malfunction schedule
     compressorSpeed: 0,
@@ -190,6 +196,11 @@
     s.condenserOutletTemp = approach(s.condenserOutletTemp, running ? tCondOut : AMBIENT_TEMP, RT);
     s.evaporatorInletTemp = approach(s.evaporatorInletTemp, running ? tEvapIn : AMBIENT_TEMP, RT);
     s.evaporatorOutletTemp = approach(s.evaporatorOutletTemp, running ? tEvapOut : AMBIENT_TEMP, RT);
+    const tWaterEvapOut = clamp(7.0 + 0.3 * (tEvapOut - 1.0) + wob(10, 0.3, 0) + (F.evaporator ? 6.0 : 0), 4.0, 18.0);
+    const tWaterEvapIn = clamp(tWaterEvapOut + 5.0 + wob(12, 0.2, 1), 7.0, 24.0);
+    s.waterEvaporatorOut = approach(s.waterEvaporatorOut, running ? tWaterEvapOut : AMBIENT_TEMP, RT);
+    s.waterEvaporatorIn = approach(s.waterEvaporatorIn, running ? tWaterEvapIn : AMBIENT_TEMP, RT);
+    s.waterEvaporator = s.waterEvaporatorOut;
 
     // Component outputs (drive fan animation / flow speed on the page)
     s.compressorSpeed = Math.round(running ? (F.compressor ? 22 : 50 + wob(10, 1.5, 0)) : 0);
@@ -236,6 +247,9 @@
     s.condenserOutletTemp = round1(s.condenserOutletTemp);
     s.evaporatorInletTemp = round1(s.evaporatorInletTemp);
     s.evaporatorOutletTemp = round1(s.evaporatorOutletTemp);
+    s.waterEvaporator = round1(s.waterEvaporator);
+    s.waterEvaporatorIn = round1(s.waterEvaporatorIn);
+    s.waterEvaporatorOut = round1(s.waterEvaporatorOut);
     s.airflowCfm = Math.round(s.airflowCfm);
     s.supplyAirTemperature = round1(s.supplyAirTemperature);
     s.mixedAirTemp = round1(s.mixedAirTemp);
@@ -356,6 +370,10 @@
     const next = Boolean(on);
     if (machineState.fanOn !== next) {
       machineState.fanOn = next;
+      if (next) {
+        machineState.running = true;
+        machineState.systemStatus = "RUNNING";
+      }
       addLog("Supply fan turned " + (next ? "ON" : "OFF"), next ? "ok" : "info");
     }
     notify();
@@ -370,6 +388,9 @@
 
   let simInterval = null;
   function init() {
+    machineState.running = true;
+    machineState.fanOn = true;
+    machineState.systemStatus = "RUNNING";
     addLog("System initialized (LIVE SIMULATION MODE)", "info");
     notify();
     if (!simInterval) {

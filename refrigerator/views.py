@@ -78,6 +78,9 @@ def save_telemetry(request):
             condenser_outlet_temp=float(data.get('condenser_outlet_temp', 24.0)),
             evaporator_inlet_temp=float(data.get('evaporator_inlet_temp', 24.0)),
             evaporator_outlet_temp=float(data.get('evaporator_outlet_temp', 24.0)),
+            water_evaporator=float(data.get('water_evaporator', 7.0)),
+            water_evaporator_inlet=float(data.get('water_evaporator_inlet', 12.0)),
+            water_evaporator_outlet=float(data.get('water_evaporator_outlet', 7.0)),
             compressor_status=str(data.get('compressor_status', 'OFF')),
             condenser_fan_status=str(data.get('condenser_fan_status', 'IDLE')),
             evaporator_fan_status=str(data.get('evaporator_fan_status', 'IDLE')),
@@ -204,16 +207,16 @@ def get_telemetry_range_info(request):
         }, status=500)
 
 
-THINGSPEAK_CHANNEL_ID = "3504371"
-THINGSPEAK_READ_KEY = "SNKTWBRJ0LSJIK2I"
+THINGSPEAK_CHANNEL_ID = "3560538"
+THINGSPEAK_READ_KEY = "04X2RNIITIQ0F0JC"
 
 
 @require_http_methods(["GET"])
 def get_thingspeak_telemetry(request):
     """
     GET /api/telemetry/thingspeak/
-    Fetches the latest live reading from the ECE ESP32-S3 ThingSpeak channel (3504371),
-    maps the sensor data to the AHU / Refrigeration telemetry schema,
+    Fetches the latest live reading from the ESP32-S3 ThingSpeak channel (3560538),
+    maps the 4 Thermocouple + DHT22 sensors to the AHU / Refrigeration telemetry schema,
     saves the record to PostgreSQL, and returns the real-time telemetry payload.
     """
     import urllib.request
@@ -226,10 +229,15 @@ def get_thingspeak_telemetry(request):
             data = json.loads(resp.read().decode('utf-8'))
 
         if not data or data == -1:
-            return JsonResponse({'status': 'error', 'message': 'No data found in ThingSpeak channel'}, status=404)
+            return JsonResponse({
+                'status': 'waiting',
+                'channel_id': THINGSPEAK_CHANNEL_ID,
+                'message': f'ThingSpeak channel #{THINGSPEAK_CHANNEL_ID} connected. Awaiting initial upload from ESP32.',
+                'telemetry': None
+            })
 
         # Robust Sensor Value Parser (Returns None if disconnected/empty/NaN/-127)
-        def parse_sensor_val(raw, min_v=-40.0, max_v=5000.0):
+        def parse_sensor_val(raw, min_v=-50.0, max_v=5000.0):
             if raw is None:
                 return None
             s = str(raw).strip().lower()
@@ -243,21 +251,34 @@ def get_thingspeak_telemetry(request):
             except (ValueError, TypeError):
                 return None
 
-        # Field 1: DHT22 Temperature (°C)
-        # Field 2: DHT22 Humidity (%)
-        # Field 3: BMP280 Temperature (°C)
-        # Field 4: BMP280 Pressure (hPa)
-        # Field 5: BMP280 Altitude / Aux (m)
-        # Field 6: MQ-135 Raw air-quality ADC
-        dht_temp = parse_sensor_val(data.get('field1'), -40.0, 120.0)
-        dht_hum = parse_sensor_val(data.get('field2'), 0.0, 100.0)
-        bmp_temp = parse_sensor_val(data.get('field3'), -40.0, 120.0)
-        bmp_press = parse_sensor_val(data.get('field4'), 0.0, 2000.0)
-        bmp_alt = parse_sensor_val(data.get('field5'), -1000.0, 100000.0)
-        mq_adc = parse_sensor_val(data.get('field6'), 0.0, 10000.0)
+        # Channel 3560538 Fields (ESP32 Temperature Monitoring System):
+        # Field 1: Thermocouple 1 (°C) -> Compressor Discharge Temp / Condenser Inlet Temp
+        # Field 2: Thermocouple 2 (°C) -> Condenser Outlet Temp / Expansion Valve Inlet Temp
+        # Field 3: Thermocouple 3 (°C) -> Expansion Valve Outlet Temp / Evaporator Inlet Temp
+        # Field 4: Thermocouple 4 (°C) -> Evaporator Outlet Temp / Compressor Suction Temp
+        # Field 5: DHT22 Temperature (°C) -> Ambient / Return Air Temp
+        # Field 6: DHT22 Humidity (%) -> Ambient / Return Air RH
+        tc1 = parse_sensor_val(data.get('field1'), -50.0, 1370.0)
+        tc2 = parse_sensor_val(data.get('field2'), -50.0, 1370.0)
+        tc3 = parse_sensor_val(data.get('field3'), -50.0, 1370.0)
+        tc4 = parse_sensor_val(data.get('field4'), -50.0, 1370.0)
+        dht_temp = parse_sensor_val(data.get('field5'), -40.0, 120.0)
+        dht_humidity = parse_sensor_val(data.get('field6'), 0.0, 100.0)
 
-        sensor_connected = (dht_temp is not None or bmp_temp is not None)
-        calc_temp = dht_temp if dht_temp is not None else (bmp_temp if bmp_temp is not None else 24.0)
+        sensor_connected = any(v is not None for v in (tc1, tc2, tc3, tc4, dht_temp))
+
+        # Sensor readings with realistic engineering defaults if any individual probe is disconnected
+        t_discharge = round(tc1, 1) if tc1 is not None else 41.2
+        t_cond_out = round(tc2, 1) if tc2 is not None else 31.2
+        t_evap_in = round(tc3, 1) if tc3 is not None else 16.2
+        t_evap_out = round(tc4, 1) if tc4 is not None else 26.2
+        t_ambient = round(dht_temp, 1) if dht_temp is not None else 28.8
+        rh_ambient = round(dht_humidity, 1) if dht_humidity is not None else 86.0
+
+        # Normal thermodynamic operating pressures for R134a refrigeration cycle
+        press_bar = 10.5
+        suction_p = 1.5
+        duct_static_pa = 75.0 if sensor_connected else 0.0
 
         created_at_str = data.get('created_at')
         entry_id = data.get('entry_id')
@@ -273,12 +294,15 @@ def get_thingspeak_telemetry(request):
             if not record:
                 record = RefrigerationTelemetry.objects.create(
                     timestamp=ts,
-                    suction_pressure=1.5,
-                    discharge_pressure=10.0,
-                    discharge_temperature=round(calc_temp + 10.0, 1) if sensor_connected else 24.0,
-                    condenser_outlet_temp=round(calc_temp, 1) if sensor_connected else 24.0,
-                    evaporator_inlet_temp=round(calc_temp - 15.0, 1) if sensor_connected else 24.0,
-                    evaporator_outlet_temp=round(calc_temp - 5.0, 1) if sensor_connected else 24.0,
+                    suction_pressure=suction_p,
+                    discharge_pressure=press_bar,
+                    discharge_temperature=t_discharge if sensor_connected else 24.0,
+                    condenser_outlet_temp=t_cond_out if sensor_connected else 24.0,
+                    evaporator_inlet_temp=t_evap_in if sensor_connected else 24.0,
+                    evaporator_outlet_temp=t_evap_out if sensor_connected else 24.0,
+                    water_evaporator=round(max(6.0, t_evap_in - 2.0), 1) if sensor_connected else 14.2,
+                    water_evaporator_inlet=round(max(10.0, t_evap_out - 7.0), 1) if sensor_connected else 19.2,
+                    water_evaporator_outlet=round(max(6.0, t_evap_in - 2.0), 1) if sensor_connected else 14.2,
                     compressor_status="RUNNING" if sensor_connected else "STANDBY",
                     condenser_fan_status="ACTIVE" if sensor_connected else "IDLE",
                     evaporator_fan_status="ACTIVE" if sensor_connected else "IDLE",
@@ -290,9 +314,9 @@ def get_thingspeak_telemetry(request):
                     vfd_frequency=45.0 if sensor_connected else 0.0,
                     vav_position=70.0,
                     airflow_cfm=850.0 if sensor_connected else 0.0,
-                    supply_air_temperature=round(dht_temp, 1) if dht_temp is not None else -999.0,
-                    return_air_temperature=round(bmp_temp, 1) if bmp_temp is not None else -999.0,
-                    supply_static_pressure=round(bmp_press, 1) if bmp_press is not None else 0.0,
+                    supply_air_temperature=t_evap_out if sensor_connected else 24.0,
+                    return_air_temperature=t_ambient if sensor_connected else 24.0,
+                    supply_static_pressure=round(duct_static_pa, 1),
                     set_temperature=22.0,
                 )
             payload = record.to_dict()
@@ -302,12 +326,15 @@ def get_thingspeak_telemetry(request):
                 "timestamp": ts.isoformat(),
                 "time_display": ts.strftime("%H:%M:%S"),
                 "date_display": ts.strftime("%Y-%m-%d"),
-                "suction_pressure": 1.5,
-                "discharge_pressure": 10.0,
-                "discharge_temperature": round(calc_temp + 10.0, 1) if sensor_connected else None,
-                "condenser_outlet_temp": round(calc_temp, 1) if sensor_connected else None,
-                "evaporator_inlet_temp": round(calc_temp - 15.0, 1) if sensor_connected else None,
-                "evaporator_outlet_temp": round(calc_temp - 5.0, 1) if sensor_connected else None,
+                "suction_pressure": suction_p,
+                "discharge_pressure": press_bar,
+                "discharge_temperature": t_discharge if sensor_connected else None,
+                "condenser_outlet_temp": t_cond_out if sensor_connected else None,
+                "evaporator_inlet_temp": t_evap_in if sensor_connected else None,
+                "evaporator_outlet_temp": t_evap_out if sensor_connected else None,
+                "water_evaporator": 14.2,
+                "water_evaporator_inlet": 19.2,
+                "water_evaporator_outlet": 14.2,
                 "compressor_status": "RUNNING" if sensor_connected else "STANDBY",
                 "condenser_fan_status": "ACTIVE" if sensor_connected else "IDLE",
                 "evaporator_fan_status": "ACTIVE" if sensor_connected else "IDLE",
@@ -319,26 +346,34 @@ def get_thingspeak_telemetry(request):
                 "vfd_frequency": 45.0 if sensor_connected else 0.0,
                 "vav_position": 70.0,
                 "airflow_cfm": 850.0 if sensor_connected else 0.0,
-                "supply_air_temperature": round(dht_temp, 1) if dht_temp is not None else None,
-                "return_air_temperature": round(bmp_temp, 1) if bmp_temp is not None else None,
-                "supply_static_pressure": round(bmp_press, 1) if bmp_press is not None else None,
+                "supply_air_temperature": t_evap_out if sensor_connected else None,
+                "return_air_temperature": t_ambient if sensor_connected else None,
+                "supply_static_pressure": round(duct_static_pa, 1),
                 "set_temperature": 22.0,
                 "db_status": f"Warning: DB sync skipped ({str(db_err)})",
             }
 
-        payload['supply_air_temperature'] = round(dht_temp, 1) if dht_temp is not None else None
-        payload['return_air_temperature'] = round(bmp_temp, 1) if bmp_temp is not None else None
-        payload['discharge_temperature'] = round(calc_temp + 10.0, 1) if sensor_connected else None
-        payload['dht_temp'] = dht_temp
-        payload['dht_humidity'] = dht_hum
-        payload['bmp_temp'] = bmp_temp
-        payload['bmp_pressure'] = bmp_press
-        payload['bmp_altitude'] = bmp_alt
-        payload['field5'] = bmp_alt
+        payload['supply_air_temperature'] = t_evap_out if sensor_connected else None
+        payload['return_air_temperature'] = t_ambient if sensor_connected else None
+        payload['discharge_temperature'] = t_discharge if sensor_connected else None
+        payload['condenser_outlet_temp'] = t_cond_out if sensor_connected else None
+        payload['evaporator_inlet_temp'] = t_evap_in if sensor_connected else None
+        payload['evaporator_outlet_temp'] = t_evap_out if sensor_connected else None
+        payload['water_evaporator_inlet'] = 19.2
+        payload['water_evaporator_outlet'] = 14.2
+        payload['water_evaporator'] = 14.2
+        payload['discharge_pressure'] = press_bar
+        payload['suction_pressure'] = suction_p
+        payload['dht_temp'] = t_ambient
+        payload['dht_humidity'] = rh_ambient
+        payload['field1_tc1'] = tc1
+        payload['field2_tc2'] = tc2
+        payload['field3_tc3'] = tc3
+        payload['field4_tc4'] = tc4
+        payload['field5'] = t_ambient
         payload['sensor_connected'] = sensor_connected
-        payload['mq_air_quality'] = mq_adc
         payload['thingspeak_entry_id'] = entry_id
-        payload['hardware_source'] = "ESP32-S3 (ThingSpeak #3504371)"
+        payload['hardware_source'] = f"ESP32-S3 (ThingSpeak #{THINGSPEAK_CHANNEL_ID})"
 
         return JsonResponse({
             'status': 'ok',
@@ -351,5 +386,3 @@ def get_thingspeak_telemetry(request):
         return JsonResponse({'status': 'error', 'message': f'ThingSpeak network error: {str(e)}'}, status=502)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': f'ThingSpeak processing error: {str(e)}'}, status=500)
-
-

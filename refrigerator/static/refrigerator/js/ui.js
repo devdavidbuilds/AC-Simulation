@@ -25,6 +25,8 @@
       "pvCondInTemp", "pvCondOutTemp",
       "pvExpInTemp", "pvExpOutTemp",
       "pvEvapInTemp", "pvEvapOutTemp",
+      "pvWaterEvapIn", "pvWaterEvapOut",
+      "pvWaterEvap",
       "pvField5", "ahuField5",
       "eventLog",
       "svgDischargePressure", "svgDischargeTemp", "svgSuctionPressure",
@@ -109,7 +111,7 @@
     const sdp = 90 * Math.pow(upstream / 1800, 2);
     const valve = Math.round(s.valveOpening || 60), hv = Math.round(s.heatingValveCommand !== undefined ? s.heatingValveCommand : 40);
     const damper = Math.round(s.damperPosition), vav = Math.round(s.vavPosition);
-    const t1 = (v) => v.toFixed(1) + " °C";
+    const t1 = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v).toFixed(1) + " °C" : "-- °C";
 
     const alerts = [];
     const warnReturn = s.returnAirTemperature > THRESHOLDS.returnTempHigh;
@@ -246,6 +248,9 @@
     pv("pvCompSucTemp", sh); pv("pvCompDisTemp", L.dT);
     pv("pvCondInTemp", L.dT); pv("pvCondOutTemp", L.cT);
     pv("pvExpInTemp", L.cT); pv("pvExpOutTemp", capL); pv("pvEvapInTemp", capL); pv("pvEvapOutTemp", sh);
+    pv("pvWaterEvapIn", evapL);
+    pv("pvWaterEvapOut", evapL);
+    pv("pvWaterEvap", evapL);
 
     ["rfCompDisP", "rfCondOutT", "rfCapEvapIn", "rfEvapOutT"].forEach((id, i) => {
       const n = document.getElementById(id);
@@ -382,6 +387,18 @@
     // Evaporator
     if (el.pvEvapInTemp) el.pvEvapInTemp.textContent = s.evaporatorInletTemp !== null && s.evaporatorInletTemp !== undefined ? s.evaporatorInletTemp.toFixed(1) + " °C" : "-- °C (N/C)";
     if (el.pvEvapOutTemp) el.pvEvapOutTemp.textContent = s.evaporatorOutletTemp !== null && s.evaporatorOutletTemp !== undefined ? s.evaporatorOutletTemp.toFixed(1) + " °C" : "-- °C (N/C)";
+    if (el.pvWaterEvapIn) {
+      const inVal = s.waterEvaporatorIn !== null && s.waterEvaporatorIn !== undefined ? s.waterEvaporatorIn : (s.running ? 12.0 : 24.0);
+      el.pvWaterEvapIn.textContent = inVal.toFixed(1) + " °C";
+    }
+    if (el.pvWaterEvapOut) {
+      const outVal = s.waterEvaporatorOut !== null && s.waterEvaporatorOut !== undefined ? s.waterEvaporatorOut : (s.waterEvaporator || (s.running ? 7.0 : 24.0));
+      el.pvWaterEvapOut.textContent = outVal.toFixed(1) + " °C";
+    }
+    if (el.pvWaterEvap) {
+      const val = s.waterEvaporatorIn !== null && s.waterEvaporatorIn !== undefined ? s.waterEvaporatorIn : (s.running ? 12.0 : 24.0);
+      el.pvWaterEvap.textContent = val.toFixed(1) + " °C";
+    }
 
     // Field 5 / Auxiliary Sensor
     if (el.pvField5) el.pvField5.textContent = s.field5 !== null && s.field5 !== undefined ? s.field5 : "--";
@@ -532,15 +549,17 @@
     if (dirArrows) dirArrows.classList.toggle("flowing", !!(isSimulating && s.running));
 
     // ---- Sensor readouts on the diagram (Always display historical frame values) ----
-    if (el.svgDischargePressure) el.svgDischargePressure.textContent = s.dischargePressure.toFixed(1) + " bar";
-    if (el.svgDischargeTemp) el.svgDischargeTemp.textContent = s.dischargeTemp.toFixed(1) + "°C";
-    if (el.svgSuctionPressure) el.svgSuctionPressure.textContent = s.suctionPressure.toFixed(1) + " bar";
-    if (el.svgCondenserOutletTemp) el.svgCondenserOutletTemp.textContent = s.condenserOutletTemp.toFixed(1) + "°C";
-    if (el.svgEvaporatorInletTemp) el.svgEvaporatorInletTemp.textContent = s.evaporatorInletTemp.toFixed(1) + "°C";
-    if (el.svgEvaporatorOutletTemp) el.svgEvaporatorOutletTemp.textContent = s.evaporatorOutletTemp.toFixed(1) + "°C";
-    if (el.svgCondenserInletTemp) el.svgCondenserInletTemp.textContent = s.dischargeTemp.toFixed(1) + "°C";
-    if (el.svgCapInletTemp) el.svgCapInletTemp.textContent = s.condenserOutletTemp.toFixed(1) + "°C";
-    if (el.svgEvapCoilInTemp) el.svgEvapCoilInTemp.textContent = s.evaporatorInletTemp.toFixed(1) + "°C";
+    const fmtBar = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v).toFixed(1) + " bar" : "-- bar";
+    const fmtC = (v) => (v !== null && v !== undefined && !isNaN(v)) ? Number(v).toFixed(1) + "°C" : "--°C";
+    if (el.svgDischargePressure) el.svgDischargePressure.textContent = fmtBar(s.dischargePressure);
+    if (el.svgDischargeTemp) el.svgDischargeTemp.textContent = fmtC(s.dischargeTemp);
+    if (el.svgSuctionPressure) el.svgSuctionPressure.textContent = fmtBar(s.suctionPressure);
+    if (el.svgCondenserOutletTemp) el.svgCondenserOutletTemp.textContent = fmtC(s.condenserOutletTemp);
+    if (el.svgEvaporatorInletTemp) el.svgEvaporatorInletTemp.textContent = fmtC(s.evaporatorInletTemp);
+    if (el.svgEvaporatorOutletTemp) el.svgEvaporatorOutletTemp.textContent = fmtC(s.evaporatorOutletTemp);
+    if (el.svgCondenserInletTemp) el.svgCondenserInletTemp.textContent = fmtC(s.dischargeTemp);
+    if (el.svgCapInletTemp) el.svgCapInletTemp.textContent = fmtC(s.condenserOutletTemp);
+    if (el.svgEvapCoilInTemp) el.svgEvapCoilInTemp.textContent = fmtC(s.evaporatorInletTemp);
     if (el.svgCompSpeed) el.svgCompSpeed.textContent = Math.round(s.compressorSpeed || 0) + " Hz";
     if (el.svgCondFanSpeed) el.svgCondFanSpeed.textContent = Math.round(s.condenserFanSpeed || 0) + " %";
     if (el.svgCapOpening) el.svgCapOpening.textContent = Math.round(s.capillaryOpening || 0) + " %";

@@ -50,7 +50,7 @@
     <!-- ---------------- AHU / BMS CONTROL PANEL ---------------- -->
     <section class="panel actuator-panel ahu-bms-panel">
       <div class="panel-header">
-        <span>First Floor Zone 01 â€” Air Handling Unit â€” AHU01</span>
+        <span>First Floor Zone 01 — Air Handling Unit — AHU01</span>
         <span class="actuator-header-state"><span class="status-lamp" id="actVfdLed"></span><span id="actFanStatus">OFF</span></span>
       </div>
       <div class="panel-body ahu-bms-body">
@@ -754,21 +754,21 @@
         <!-- 2. Condenser -->
         <div class="param-box warm">
           <div class="param-label">Condenser Inlet Temp.</div>
-          <div class="param-value" id="pvCondInTemp">24.0 Â°C</div>
+          <div class="param-value" id="pvCondInTemp">24.0 °C</div>
         </div>
         <div class="param-box blue">
           <div class="param-label">Condenser Outlet Temp.</div>
-          <div class="param-value" id="pvCondOutTemp">24.0 Â°C</div>
+          <div class="param-value" id="pvCondOutTemp">24.0 °C</div>
         </div>
 
         <!-- 3. Expansion Valve (Capillary Tube) -->
         <div class="param-box blue">
           <div class="param-label">Expansion Valve Inlet T</div>
-          <div class="param-value" id="pvExpInTemp">24.0 Â°C</div>
+          <div class="param-value" id="pvExpInTemp">24.0 °C</div>
         </div>
         <div class="param-box blue">
           <div class="param-label">Expansion Valve Outlet T</div>
-          <div class="param-value" id="pvExpOutTemp">24.0 Â°C</div>
+          <div class="param-value" id="pvExpOutTemp">24.0 °C</div>
         </div>
 
         <!-- 4. Evaporator -->
@@ -781,11 +781,18 @@
           <div class="param-value" id="pvEvapOutTemp">24.0 °C</div>
         </div>
 
-        <!-- 5. Field 5 / Auxiliary Sensor -->
-        <div class="param-box" style="grid-column: span 2; border: 1px solid #059669;">
-          <div class="param-label" style="background:#064e3b; color:#a7f3d0;">Field 5 (Altitude / Aux Sensor)</div>
-          <div class="param-value" id="pvField5" style="color:#34d399;">--</div>
+        <!-- 5. Water Evaporator Inlet -->
+        <div class="param-box blue" style="grid-column: span 2;">
+          <div class="param-label">Water Evaporator Inlet Temp.</div>
+          <div class="param-value" id="pvWaterEvapIn">24.0 °C</div>
         </div>
+
+        <!-- 6. Water Evaporator Outlet -->
+        <div class="param-box blue" style="grid-column: span 2;">
+          <div class="param-label">Water Evaporator Outlet Temp.</div>
+          <div class="param-value" id="pvWaterEvapOut">24.0 °C</div>
+        </div>
+        <div id="pvField5" style="display:none;"></div>
       </div>
     </section>
 

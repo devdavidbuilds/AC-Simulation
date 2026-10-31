@@ -57,8 +57,14 @@
       });
     });
     if (inlineFanToggle) {
+      inlineFanToggle.checked = Boolean(Sim.state.fanOn);
       inlineFanToggle.addEventListener("change", function () {
         Sim.setFan(this.checked);
+        if (this.checked) {
+          Sim.start();
+        } else {
+          Sim.stop();
+        }
       });
     }
 
@@ -137,8 +143,8 @@
     // ------------------------------------------------------------
     // Live IoT (ThingSpeak & PostgreSQL) Polling Engine
     // ------------------------------------------------------------
-    const THINGSPEAK_CHANNEL_ID = "3504371";
-    const THINGSPEAK_READ_KEY = "SNKTWBRJ0LSJIK2I";
+    const THINGSPEAK_CHANNEL_ID = "3560538";
+    const THINGSPEAK_READ_KEY = "04X2RNIITIQ0F0JC";
     const THINGSPEAK_DIRECT_URL = `https://api.thingspeak.com/channels/${THINGSPEAK_CHANNEL_ID}/feeds/last.json?api_key=${THINGSPEAK_READ_KEY}`;
 
     let livePollInterval = null;
@@ -160,25 +166,44 @@
     }
 
     function mapThingSpeakFeedToPayload(feed) {
-      if (!feed || feed === -1) return null;
-      // Channel 3504371 Fields:
-      // Field 1: DHT22 Temperature (°C)
-      // Field 2: DHT22 Humidity (%)
-      // Field 3: BMP280 Temperature (°C)
-      // Field 4: BMP280 Pressure (hPa)
-      // Field 5: BMP280 Altitude / Aux (m)
-      // Field 6: MQ-135 Raw air-quality ADC
-      const dhtTemp = parseSensorVal(feed.field1, -40, 120);
-      const dhtHum = parseSensorVal(feed.field2, 0, 100);
-      const bmpTemp = parseSensorVal(feed.field3, -40, 120);
-      const bmpPress = parseSensorVal(feed.field4, 0, 2000);
-      const bmpAlt = parseSensorVal(feed.field5, -1000, 100000);
-      const mqAdc = parseSensorVal(feed.field6, 0, 10000);
+      if (!feed || feed === -1 || feed === "-1") {
+        return {
+          waiting: true,
+          channelId: THINGSPEAK_CHANNEL_ID,
+          telemetry: null,
+          source: `ESP32-S3 (ThingSpeak #${THINGSPEAK_CHANNEL_ID})`
+        };
+      }
+
+      // Channel 3560538 Fields (ESP32 Temperature Monitoring System):
+      // Field 1: Thermocouple 1 (°C) -> Compressor Discharge Temp / Condenser Inlet Temp
+      // Field 2: Thermocouple 2 (°C) -> Condenser Outlet Temp / Expansion Valve Inlet Temp
+      // Field 3: Thermocouple 3 (°C) -> Expansion Valve Outlet Temp / Evaporator Inlet Temp
+      // Field 4: Thermocouple 4 (°C) -> Evaporator Outlet Temp / Compressor Suction Temp
+      // Field 5: DHT22 Temperature (°C) -> Ambient / Return Air Temp
+      // Field 6: DHT22 Humidity (%) -> Ambient / Return Air RH
+      const tc1 = parseSensorVal(feed.field1, -50, 1370);
+      const tc2 = parseSensorVal(feed.field2, -50, 1370);
+      const tc3 = parseSensorVal(feed.field3, -50, 1370);
+      const tc4 = parseSensorVal(feed.field4, -50, 1370);
+      const dhtTemp = parseSensorVal(feed.field5, -40, 120);
+      const dhtHum = parseSensorVal(feed.field6, 0, 100);
       const entryId = feed.entry_id || 1;
       const createdAt = feed.created_at || new Date().toISOString();
       const dt = new Date(createdAt);
 
-      const isConnected = (dhtTemp !== null || bmpTemp !== null);
+      const isConnected = (tc1 !== null || tc2 !== null || tc3 !== null || tc4 !== null || dhtTemp !== null);
+
+      const tDischarge = tc1 !== null ? Math.round(tc1 * 10) / 10 : 41.2;
+      const tCondOut = tc2 !== null ? Math.round(tc2 * 10) / 10 : 31.2;
+      const tEvapIn = tc3 !== null ? Math.round(tc3 * 10) / 10 : 16.2;
+      const tEvapOut = tc4 !== null ? Math.round(tc4 * 10) / 10 : 26.2;
+      const tAmbient = dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : 28.8;
+      const rhAmbient = dhtHum !== null ? Math.round(dhtHum * 10) / 10 : 86.0;
+
+      const pressBar = 10.5;
+      const suctionP = 1.5;
+      const ductStaticPa = isConnected ? 75 : 0;
 
       return {
         telemetry: {
@@ -186,12 +211,15 @@
           timestamp: createdAt,
           time_display: !isNaN(dt.getTime()) ? dt.toLocaleTimeString() : new Date().toLocaleTimeString(),
           date_display: !isNaN(dt.getTime()) ? dt.toLocaleDateString() : new Date().toLocaleDateString(),
-          suction_pressure: 1.5,
-          discharge_pressure: 10.0,
-          discharge_temperature: dhtTemp !== null ? Math.round((dhtTemp + 10.0) * 10) / 10 : null,
-          condenser_outlet_temp: dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : null,
-          evaporator_inlet_temp: dhtTemp !== null ? Math.round((dhtTemp - 15.0) * 10) / 10 : null,
-          evaporator_outlet_temp: dhtTemp !== null ? Math.round((dhtTemp - 5.0) * 10) / 10 : null,
+          suction_pressure: suctionP,
+          discharge_pressure: pressBar,
+          discharge_temperature: isConnected ? tDischarge : null,
+          condenser_outlet_temp: isConnected ? tCondOut : null,
+          evaporator_inlet_temp: isConnected ? tEvapIn : null,
+          evaporator_outlet_temp: isConnected ? tEvapOut : null,
+          water_evaporator: 14.2,
+          water_evaporator_inlet: 19.2,
+          water_evaporator_outlet: 14.2,
           compressor_status: isConnected ? "RUNNING" : "STANDBY",
           condenser_fan_status: isConnected ? "ACTIVE" : "IDLE",
           evaporator_fan_status: isConnected ? "ACTIVE" : "IDLE",
@@ -204,15 +232,14 @@
           vfd_frequency: isConnected ? 45.0 : 0.0,
           vav_position: 70.0,
           airflow_cfm: isConnected ? 850.0 : 0.0,
-          supply_air_temperature: dhtTemp !== null ? Math.round(dhtTemp * 10) / 10 : null,
-          return_air_temperature: bmpTemp !== null ? Math.round(bmpTemp * 10) / 10 : null,
-          supply_static_pressure: bmpPress !== null ? Math.round(bmpPress * 10) / 10 : null,
+          supply_air_temperature: isConnected ? tEvapOut : null,
+          return_air_temperature: isConnected ? tAmbient : null,
+          supply_static_pressure: ductStaticPa,
           set_temperature: 22.0,
-          dht_humidity: dhtHum,
-          bmp_altitude: bmpAlt,
-          field5: bmpAlt,
+          dht_humidity: rhAmbient,
+          bmp_altitude: tAmbient,
+          field5: tAmbient,
           sensor_connected: isConnected,
-          mq_air_quality: mqAdc,
           thingspeak_entry_id: entryId,
           hardware_source: `ESP32-S3 (ThingSpeak #${THINGSPEAK_CHANNEL_ID})`
         },
@@ -304,6 +331,9 @@
       state.returnAirTemperature = rec.return_air_temperature;
       state.dischargeTemp = rec.discharge_temperature;
       state.supplyStaticPressure = rec.supply_static_pressure;
+      state.waterEvaporator = rec.water_evaporator !== undefined ? rec.water_evaporator : (isConnected ? 7.0 : 24.0);
+      state.waterEvaporatorIn = rec.water_evaporator_inlet !== undefined ? rec.water_evaporator_inlet : (isConnected ? 12.0 : 24.0);
+      state.waterEvaporatorOut = rec.water_evaporator_outlet !== undefined ? rec.water_evaporator_outlet : (rec.water_evaporator || (isConnected ? 7.0 : 24.0));
       state.mqAirQuality = rec.mq_air_quality;
 
       const timeStr = rec.time_display || new Date().toLocaleTimeString();
@@ -339,7 +369,8 @@
           alertBar.style.background = "#064e3b";
           alertBar.style.borderColor = "#10b981";
           alertBar.style.color = "#ecfdf5";
-          alertBar.innerHTML = `<strong>📡 ThingSpeak Live IoT Sync:</strong> Entry #${data.entryId} (Recorded: ${rec.date_display} ${rec.time_display}) &nbsp;|&nbsp; <strong>Temp (F1):</strong> ${rec.supply_air_temperature}°C &nbsp;|&nbsp; <strong>Humidity (F2):</strong> ${rec.dht_humidity ?? "--"}% &nbsp;|&nbsp; <strong>Pressure (F4):</strong> ${rec.supply_static_pressure ?? "--"} hPa &nbsp;|&nbsp; <strong>Field 5 (Alt/Aux):</strong> <span style="background:#047857; padding:2px 6px; border-radius:3px; font-weight:bold;">${state.field5 ?? "--"}</span>`;
+          const dischP = rec.discharge_pressure !== undefined ? rec.discharge_pressure : (state.dischargePressure || 10.0);
+          alertBar.innerHTML = `<strong>📡 ThingSpeak Live IoT Sync:</strong> Entry #${data.entryId} (Recorded: ${rec.date_display} ${rec.time_display}) &nbsp;|&nbsp; <strong>Thermocouple:</strong> ${rec.supply_air_temperature}°C &nbsp;|&nbsp; <strong>Refrig Pressure:</strong> ${dischP} bar &nbsp;|&nbsp; <strong>Duct Static P:</strong> ${rec.supply_static_pressure ?? 75} Pa`;
         }
       }
 
@@ -409,7 +440,7 @@
           }
           await pollAndRenderTelemetry(null, dbSaveStatus);
           livePollInterval = setInterval(() => pollAndRenderTelemetry(null, dbSaveStatus), 3000);
-          Sim.addLog("Live IoT polling connected to ESP32-S3 ThingSpeak channel #3504371", "ok");
+          Sim.addLog(`Live IoT polling connected to ESP32-S3 ThingSpeak channel #${THINGSPEAK_CHANNEL_ID}`, "ok");
         } else {
           isLiveIotPollingActive = false;
           if (livePollInterval) {
